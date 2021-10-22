@@ -19,6 +19,7 @@ key_size=${KEY_SIZE:-256}
 
 if [[ -n "${BALENA_DEVICE_UUID}" ]]; then
     # prepend the device UUID if running on balenaOS
+    # shellcheck disable=SC2153
     TLD="${BALENA_DEVICE_UUID}.${DNS_TLD}"
 else
     TLD="${DNS_TLD}"
@@ -95,7 +96,7 @@ function get_acme_email {
         # shellcheck disable=SC2153
         acme_email="$(curl --retry "${attempts}" --fail "${BALENA_API_URL}/user/v1/whoami" \
           -H "Content-Type: application/json" \
-          -H "Authorization: Bearer $(get_env_var_value ${balena_device_uuid} API_TOKEN)" \
+          -H "Authorization: Bearer $(get_env_var_value "${balena_device_uuid}" API_TOKEN)" \
           --compressed | jq -r '.email')"
     fi
     echo "${acme_email}"
@@ -140,7 +141,7 @@ function cloudflare_issue_public_cert {
     dns_tld="${2}"
     [[ -n "${dns_tld}" ]] || return
 
-    cloudflare_api_token="$(get_env_var_value ${balena_device_uuid} CLOUDFLARE_API_TOKEN)"
+    cloudflare_api_token="$(get_env_var_value "${balena_device_uuid}" CLOUDFLARE_API_TOKEN)"
     [[ -n "${cloudflare_api_token}" ]] || return
 
     mkdir -p ~/.secrets/certbot
@@ -168,7 +169,7 @@ function gandi_issue_public_cert {
     dns_tld="${2}"
     [[ -n "${dns_tld}" ]] || return
 
-    gandi_api_token="$(get_env_var_value ${balena_device_uuid} GANDI_API_TOKEN)"
+    gandi_api_token="$(get_env_var_value "${balena_device_uuid}" GANDI_API_TOKEN)"
     [[ -n "${gandi_api_token}" ]] || return
 
     mkdir -p ~/.secrets/certbot
@@ -440,7 +441,7 @@ function get_root_ca {
     fi
 }
 
-mkdir -p "${CERTS}/public" "${CERTS}/private" $(dirname "${EXPORT_CERT_CHAIN_PATH}")
+mkdir -p "${CERTS}/public" "${CERTS}/private" "$(dirname "${EXPORT_CERT_CHAIN_PATH}")"
 
 while ! curl -I --fail "${ca_http_url}"; do sleep "$((RANDOM%10+1))s"; done
 
@@ -657,12 +658,12 @@ EOF
 [[ -n $KEYS_EXTRA ]] && echo ",${KEYS_EXTRA}" | base64 -d | jq -r >> "${REQUESTS_KEYS}"
 
 # don't generate default certs package
-if [[ "${DEFAULT_CERTS" != "true" } ]]; then
+if [[ "${DEFAULT_CERTS}" != "true" ]]; then
     echo [] | jq -r > "${REQUESTS_CERTS}"
 fi
 
 # don't generate default keys package
-if [[ "${DEFAULT_KEYS" != "true" } ]]; then
+if [[ "${DEFAULT_KEYS}" != "true" ]]; then
     echo [] | jq -r > "${REQUESTS_KEYS}"
 fi
 
