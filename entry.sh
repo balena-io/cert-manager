@@ -5,6 +5,8 @@ set -exa
 CERTS=${CERTS:-/certs}
 EXPORT_CERT_CHAIN_PATH=${EXPORT_CERT_CHAIN_PATH:-${CERTS}/export/chain.pem}
 SUBJECT_ALTERNATE_NAMES=${SUBJECT_ALTERNATE_NAMES:-*,*.devices,*.s3,*.img}
+DEFAULT_CERTS=${DEFAULT_CERTS:-true}
+DEFAULT_KEYS=${DEFAULT_KEYS:-true}
 ca_http_url=${CA_HTTP_URL:-http://balena-ca:8888}
 attempts=${ATTEMPTS:-5}
 country=${COUNTRY:-US}
@@ -653,6 +655,16 @@ cat << EOF > "${REQUESTS_KEYS}"
 ]
 EOF
 [[ -n $KEYS_EXTRA ]] && echo ",${KEYS_EXTRA}" | base64 -d | jq -r >> "${REQUESTS_KEYS}"
+
+# don't generate default certs package
+if [[ "${DEFAULT_CERTS" != "true" } ]]; then
+    echo [] | jq -r > "${REQUESTS_CERTS}"
+fi
+
+# don't generate default keys package
+if [[ "${DEFAULT_KEYS" != "true" } ]]; then
+    echo [] | jq -r > "${REQUESTS_KEYS}"
+fi
 
 # generate cryptographic assets
 issue_private_certs "${REQUESTS_CERTS}"
