@@ -337,15 +337,19 @@ function surface_resolved_cert_chain {
     for cert in "${tld}.pem" \
       "${tld}.key" \
       "${tld}-chain.pem"; do
+        # shellcheck disable=SC2235
         if ! [[ -L "${CERTS}/${cert}" ]] \
-          || ! [[ "$(readlink -f "${CERTS}/${cert}")" =~ ${CERTS}\/${target}\/ ]]; then
+          || (! [[ "$(readlink -f "${CERTS}/${cert}")" =~ ${CERTS}\/${target}\/ ]]) \
+          && [[ -f "${CERTS}/${target}/${cert}" ]]; then
             rm -f "${CERTS}/${cert}"
             ln -s "${CERTS}/${target}/${cert}" "${CERTS}/${cert}"
         fi
     done
 
-    if ! [[ -L "${EXPORT_CERT_CHAIN_PATH}" ]] \
-      || ! [[ "$(readlink -f "${EXPORT_CERT_CHAIN_PATH}")" =~ ${CERTS}\/${target}\/ ]]; then
+    # shellcheck disable=SC2235
+    if (! [[ -L "${EXPORT_CERT_CHAIN_PATH}" ]] \
+      || ! [[ "$(readlink -f "${EXPORT_CERT_CHAIN_PATH}")" =~ ${CERTS}\/${target}\/ ]]) \
+      && [[ -f "${CERTS}/${target}/${tld}-chain.pem" ]]; then
         rm -f "${EXPORT_CERT_CHAIN_PATH}"
         ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
     fi
@@ -372,9 +376,9 @@ function surface_root_certs {
     [[ -n "${tld}" ]] || return
 
     for cert in ca-bundle server-ca root-ca; do
-        if ! [[ -L "${CERTS}/${cert}.pem" ]]; then
-            ln -s "${CERTS}/private/${cert}.${tld}.pem" \
-              "${CERTS}/${cert}.pem"
+        if ! [[ -L "${CERTS}/${cert}.pem" ]] \
+          && [[ -f "${CERTS}/private/${cert}.${tld}.pem" ]]; then
+            ln -s "${CERTS}/private/${cert}.${tld}.pem" "${CERTS}/${cert}.pem"
         fi
     done
 }
@@ -657,25 +661,29 @@ cat << EOF > "${REQUESTS_KEYS}"
 EOF
 [[ -n $KEYS_EXTRA ]] && echo ",${KEYS_EXTRA}" | base64 -d | jq -r >> "${REQUESTS_KEYS}"
 
-# don't generate default certs package
-if [[ "${DEFAULT_CERTS}" != "true" ]]; then
-    echo [] | jq -r > "${REQUESTS_CERTS}"
-fi
-
-# don't generate default keys package
-if [[ "${DEFAULT_KEYS}" != "true" ]]; then
-    echo [] | jq -r > "${REQUESTS_KEYS}"
-fi
-
 # generate cryptographic assets
-issue_private_certs "${REQUESTS_CERTS}"
-issue_private_keys "${REQUESTS_KEYS}"
+if [[ "${DEFAULT_CERTS}" =~ true ]]; then
+    issue_private_certs "${REQUESTS_CERTS}"
+fi
+
+if [[ "${DEFAULT_KEYS}" =~ true ]]; then
+    issue_private_keys "${REQUESTS_KEYS}"
+fi
+
 if [[ -n "${BALENA_DEVICE_UUID}" ]]; then
     issue_public_certs "${BALENA_DEVICE_UUID}" "${DNS_TLD}" "${TLD}"
 fi
+
 surface_root_certs "${TLD}"
-generate_compute_all "${TLD}"
-assemble_private_cert_chain "${TLD}"
+
+if [[ "${DEFAULT_CERTS}" =~ true ]] && [[ "${DEFAULT_KEYS}" =~ true ]]; then
+    generate_compute_all "${TLD}"
+fi
+
+if [[ "${DEFAULT_CERTS}" =~ true ]] && [[ "${DEFAULT_KEYS}" =~ true ]]; then
+    assemble_private_cert_chain "${TLD}"
+fi
+
 surface_resolved_cert_chain "${TLD}"
 
 # signal healthy
