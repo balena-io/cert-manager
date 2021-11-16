@@ -1,0 +1,89 @@
+[
+  {
+    "key": {
+      "algo": "rsa",
+      "size": 3072
+    },
+    "hosts": [
+      "proxy.${TLD}.rsa"
+    ],
+    "names": [
+      {
+        "C": "${country}",
+        "L": "${locality_name}",
+        "O": "${org}",
+        "OU": "${org_unit}",
+        "ST": "${state}"
+      }
+    ],
+    "CN": "proxy.${TLD}.rsa"
+  },
+  {
+    "hosts": [
+      "proxy.${TLD}.ecdsa"
+    ],
+    "names": [
+      {
+        "C": "${country}",
+        "L": "${locality_name}",
+        "O": "${org}",
+        "OU": "${org_unit}",
+        "ST": "${state}"
+      }
+    ],
+    "CN": "proxy.${TLD}.ecdsa"
+  },
+  {
+    "key": {
+      "algo": "rsa",
+      "size": 3072
+    },
+    "hosts": [
+      "git.${TLD}.rsa"
+    ],
+    "names": [
+      {
+        "C": "${country}",
+        "L": "${locality_name}",
+        "O": "${org}",
+        "OU": "${org_unit}",
+        "ST": "${state}"
+      }
+    ],
+    "CN": "git.${TLD}.rsa"
+  },
+  {
+    "hosts": [
+      "git.${TLD}.ecdsa"
+    ],
+    "names": [
+      {
+        "C": "${country}",
+        "L": "${locality_name}",
+        "O": "${org}",
+        "OU": "${org_unit}",
+        "ST": "${state}"
+      }
+    ],
+    "CN": "git.${TLD}.ecdsa"
+  },
+  {
+    "key": {
+      "algo": "rsa",
+      "size": 4096
+    },
+    "hosts": [
+      "devices.${TLD}.rsa"
+    ],
+    "names": [
+      {
+        "C": "${country}",
+        "L": "${locality_name}",
+        "O": "${org}",
+        "OU": "${org_unit}",
+        "ST": "${state}"
+      }
+    ],
+    "CN": "devices.${TLD}.rsa"
+  }
+]

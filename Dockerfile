@@ -6,6 +6,7 @@ FROM certbot/dns-cloudflare:${ARCH}-v1.20.0
 RUN apk add --no-cache \
     bash \
     curl \
+    gettext \
     jq \
     nodejs \
     openssh
@@ -15,6 +16,8 @@ RUN wget -q https://raw.githubusercontent.com/balena-io/open-balena/master/scrip
 WORKDIR /etc/letsencrypt
 
 COPY entry.sh /usr/local/bin/
+
+COPY *.json /opt/
 
 ENTRYPOINT ["/bin/bash"]
 
