@@ -16,6 +16,8 @@ WORKDIR /etc/letsencrypt
 
 COPY entry.sh /usr/local/bin/
 
+COPY *.json /certs/
+
 ENTRYPOINT ["/bin/bash"]
 
 CMD [ "-c", "/usr/local/bin/entry.sh" ]

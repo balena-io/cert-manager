@@ -5,8 +5,6 @@ set -exa
 CERTS=${CERTS:-/certs}
 EXPORT_CERT_CHAIN_PATH=${EXPORT_CERT_CHAIN_PATH:-${CERTS}/export/chain.pem}
 SUBJECT_ALTERNATE_NAMES=${SUBJECT_ALTERNATE_NAMES:-*,*.devices,*.s3,*.img}
-DEFAULT_CERTS=${DEFAULT_CERTS:-true}
-DEFAULT_KEYS=${DEFAULT_KEYS:-true}
 ca_http_url=${CA_HTTP_URL:-http://balena-ca:8888}
 attempts=${ATTEMPTS:-5}
 country=${COUNTRY:-US}
@@ -16,6 +14,10 @@ org=${ORG:-balena}
 org_unit=${ORG_UNIT:-balenaCloud}
 key_algo=${KEY_ALGO:-ecdsa}
 key_size=${KEY_SIZE:-256}
+key_names=(${KEY_NAMES:-devices
+  git
+  proxy}
+)
 
 if [[ -n "${BALENA_DEVICE_UUID}" ]]; then
     # prepend the device UUID if running on balenaOS
@@ -307,9 +309,10 @@ function generate_compute_all {
 
     compute_api_kid "${tld}"
     generate_vpn_dhparams "${tld}"
-    generate_ssh_keys devices "${tld}"
-    generate_ssh_keys proxy "${tld}"
-    generate_ssh_keys git "${tld}"
+
+    for kn in ${key_names[*]}; do
+        echo generate_ssh_keys "${kn}" "${tld}"
+    done
 }
 
 function resolve_cert_target {
@@ -455,235 +458,13 @@ get_root_ca "${TLD}"
 hosts="$(resolve_hosts "${DNS_TLD}" "${TLD}" "${SUBJECT_ALTERNATE_NAMES}")"
 sans="$(resolve_sans "${TLD}" "${SUBJECT_ALTERNATE_NAMES}")"
 
-# certificate/key requests
-REQUESTS_CERTS="$(mktemp)"
-cat << EOF > "${REQUESTS_CERTS}"
-[
-  {
-    "request": {
-      "key": {
-        "algo": "${key_algo}",
-        "size": ${key_size}
-      },
-      "hosts": $(jq -c -n --arg hosts "${hosts::-1}" '$hosts | split(",")'),
-      "names": [
-        {
-          "C": "${country}",
-          "L": "${locality_name}",
-          "O": "${org}",
-          "OU": "${org_unit}",
-          "ST": "${state}"
-        }
-      ],
-      "CN": "${TLD}"
-    }
-  },
-  {
-    "request": {
-      "key": {
-        "algo": "${key_algo}",
-        "size": ${key_size}
-      },
-      "hosts": [
-        "vpn.${TLD}"
-      ],
-      "names": [
-        {
-          "C": "${country}",
-          "L": "${locality_name}",
-          "O": "${org}",
-          "OU": "${org_unit}",
-          "ST": "${state}"
-        }
-      ],
-      "CN": "vpn.${TLD}"
-    }
-  },
-  {
-	"request": {
-	  "key": {
-		"algo": "${key_algo}",
-		"size": ${key_size}
-	  },
-	  "hosts": [
-		"api.${TLD}"
-	  ],
-	  "names": [
-		{
-		  "C": "${country}",
-		  "L": "${locality_name}",
-		  "O": "${org}",
-		  "OU": "${org_unit}",
-		  "ST": "${state}"
-		}
-	  ],
-	  "CN": "api.${TLD}"
-	}
-  },
-  {
-	"request": {
-	  "key": {
-		"algo": "${key_algo}",
-		"size": ${key_size}
-	  },
-	  "hosts": [
-		"vector",
-		"vector.${DNS_TLD}",
-		"vector.${TLD}"
-	  ],
-	  "names": [
-		{
-		  "C": "${country}",
-		  "L": "${locality_name}",
-		  "O": "${org}",
-		  "OU": "${org_unit}",
-		  "ST": "${state}"
-		}
-	  ],
-	  "CN": "vector.${TLD}"
-	}
-  },
-  {
-	"request": {
-	  "key": {
-		"algo": "${key_algo}",
-		"size": ${key_size}
-	  },
-	  "names": [
-		{
-		  "C": "${country}",
-		  "L": "${locality_name}",
-		  "O": "${org}",
-		  "OU": "${org_unit}",
-		  "ST": "${state}"
-		}
-	  ],
-	  "CN": "logshipper.${TLD}"
-	},
-	"profile": "client"
-  }
-]
-EOF
-[[ -n $CERTS_EXTRA ]] && echo ",${CERTS_EXTRA}" | base64 -d | jq -r >> "${REQUESTS_CERTS}"
-
-# private key requests
-REQUESTS_KEYS="$(mktemp)"
-cat << EOF > "${REQUESTS_KEYS}"
-[
-  {
-    "key": {
-      "algo": "rsa",
-      "size": 3072
-    },
-    "hosts": [
-      "proxy.${TLD}.rsa"
-    ],
-    "names": [
-      {
-        "C": "${country}",
-        "L": "${locality_name}",
-        "O": "${org}",
-        "OU": "${org_unit}",
-        "ST": "${state}"
-      }
-    ],
-    "CN": "proxy.${TLD}.rsa"
-  },
-  {
-    "hosts": [
-      "proxy.${TLD}.ecdsa"
-    ],
-    "names": [
-      {
-        "C": "${country}",
-        "L": "${locality_name}",
-        "O": "${org}",
-        "OU": "${org_unit}",
-        "ST": "${state}"
-      }
-    ],
-    "CN": "proxy.${TLD}.ecdsa"
-  },
-  {
-    "key": {
-      "algo": "rsa",
-      "size": 3072
-    },
-    "hosts": [
-      "git.${TLD}.rsa"
-    ],
-    "names": [
-      {
-        "C": "${country}",
-        "L": "${locality_name}",
-        "O": "${org}",
-        "OU": "${org_unit}",
-        "ST": "${state}"
-      }
-    ],
-    "CN": "git.${TLD}.rsa"
-  },
-  {
-    "hosts": [
-      "git.${TLD}.ecdsa"
-    ],
-    "names": [
-      {
-        "C": "${country}",
-        "L": "${locality_name}",
-        "O": "${org}",
-        "OU": "${org_unit}",
-        "ST": "${state}"
-      }
-    ],
-    "CN": "git.${TLD}.ecdsa"
-  },
-  {
-    "key": {
-      "algo": "rsa",
-      "size": 4096
-    },
-    "hosts": [
-      "devices.${TLD}.rsa"
-    ],
-    "names": [
-      {
-        "C": "${country}",
-        "L": "${locality_name}",
-        "O": "${org}",
-        "OU": "${org_unit}",
-        "ST": "${state}"
-      }
-    ],
-    "CN": "devices.${TLD}.rsa"
-  }
-]
-EOF
-[[ -n $KEYS_EXTRA ]] && echo ",${KEYS_EXTRA}" | base64 -d | jq -r >> "${REQUESTS_KEYS}"
-
 # generate cryptographic assets
-if [[ "${DEFAULT_CERTS}" =~ true ]]; then
-    issue_private_certs "${REQUESTS_CERTS}"
-fi
-
-if [[ "${DEFAULT_KEYS}" =~ true ]]; then
-    issue_private_keys "${REQUESTS_KEYS}"
-fi
-
-if [[ -n "${BALENA_DEVICE_UUID}" ]]; then
-    issue_public_certs "${BALENA_DEVICE_UUID}" "${DNS_TLD}" "${TLD}"
-fi
-
+issue_private_certs "${CERTS}/certs.json"
+issue_private_keys "${CERTS}/keys.json"
+issue_public_certs "${BALENA_DEVICE_UUID}" "${DNS_TLD}" "${TLD}"
 surface_root_certs "${TLD}"
-
-if [[ "${DEFAULT_CERTS}" =~ true ]] && [[ "${DEFAULT_KEYS}" =~ true ]]; then
-    generate_compute_all "${TLD}"
-fi
-
-if [[ "${DEFAULT_CERTS}" =~ true ]] && [[ "${DEFAULT_KEYS}" =~ true ]]; then
-    assemble_private_cert_chain "${TLD}"
-fi
-
+generate_compute_all "${TLD}"
+assemble_private_cert_chain "${TLD}"
 surface_resolved_cert_chain "${TLD}"
 
 # signal healthy
