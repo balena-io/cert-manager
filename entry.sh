@@ -664,23 +664,28 @@ EOF
 # generate cryptographic assets
 if [[ "${DEFAULT_CERTS}" =~ true ]]; then
     issue_private_certs "${REQUESTS_CERTS}"
+elif [[ -n $CERTS_EXTRA ]]; then
+    echo "${CERTS_EXTRA}" | base64 -d | jq -r >> "${REQUESTS_CERTS}"
+    issue_private_certs "${REQUESTS_CERTS}"
 fi
 
 if [[ "${DEFAULT_KEYS}" =~ true ]]; then
     issue_private_keys "${REQUESTS_KEYS}"
+elif [[ -n $KEYS_EXTRA ]]; then
+    echo "${KEYS_EXTRA}" | base64 -d | jq -r >> "${REQUESTS_KEYS}"
+    issue_private_certs "${REQUESTS_KEYS}"
 fi
 
+# (TBC) remove dependency on BALENA_DEVICE_UUID
 if [[ -n "${BALENA_DEVICE_UUID}" ]]; then
     issue_public_certs "${BALENA_DEVICE_UUID}" "${DNS_TLD}" "${TLD}"
 fi
 
 surface_root_certs "${TLD}"
 
+# specific to balenaMachine
 if [[ "${DEFAULT_CERTS}" =~ true ]] && [[ "${DEFAULT_KEYS}" =~ true ]]; then
     generate_compute_all "${TLD}"
-fi
-
-if [[ "${DEFAULT_CERTS}" =~ true ]] && [[ "${DEFAULT_KEYS}" =~ true ]]; then
     assemble_private_cert_chain "${TLD}"
 fi
 
