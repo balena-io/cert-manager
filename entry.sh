@@ -348,11 +348,11 @@ function surface_resolved_cert_chain {
     done
 
     # shellcheck disable=SC2235
-    if (! [[ -L "${EXPORT_CERT_CHAIN_PATH}" ]] \
-      || ! [[ "$(readlink -f "${EXPORT_CERT_CHAIN_PATH}")" =~ ${CERTS}\/${target}\/ ]]) \
-      && [[ -f "${CERTS}/${target}/${tld}-chain.pem" ]]; then
-        rm -f "${EXPORT_CERT_CHAIN_PATH}"
-        ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
+    if [[ -f "${CERTS}/${target}/${tld}-chain.pem" ]]; then
+        if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then
+            rm -f "${EXPORT_CERT_CHAIN_PATH}"
+            ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
+        fi
     fi
 }
 
