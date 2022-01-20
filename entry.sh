@@ -209,32 +209,36 @@ function issue_public_certs {
           || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
           || true
 
-        if [[ -f "live/${dns_tld}/fullchain.pem" ]] \
-          && [[ -f "live/${dns_tld}/privkey.pem" ]]; then
+        # Refresh link to the latest certificate set
+        rm -f live/latest && \
+        ln -fs $(cd live && ls -dt ${dns_tld}* | head -n1) live/latest
+
+        if [[ -f "live/latest/fullchain.pem" ]] \
+          && [[ -f "live/latest/privkey.pem" ]]; then
             # only update if renewed
-            if ! diff "live/${dns_tld}/fullchain.pem" \
+            if ! diff "live/latest/fullchain.pem" \
               "${CERTS}/public/${tld}.pem"; then
-                cat < "live/${dns_tld}/fullchain.pem" \
+                cat < "live/latest/fullchain.pem" \
                   > "${CERTS}/public/${tld}.pem"
             fi
 
-            if ! diff "live/${dns_tld}/privkey.pem" \
+            if ! diff "live/latest/privkey.pem" \
               "${CERTS}/public/${tld}.key"; then
-                cat < "live/${dns_tld}/privkey.pem" \
+                cat < "live/latest/privkey.pem" \
                   > "${CERTS}/public/${tld}.key"
             fi
 
             tmpchain="$(mktemp)"
 
-            if ! diff "live/${dns_tld}/fullchain.pem" \
-              "live/${dns_tld}/privkey.pem"; then
-                cat "live/${dns_tld}/fullchain.pem" \
-                  "live/${dns_tld}/privkey.pem" > "${tmpchain}"
+            if ! diff "live/latest/fullchain.pem" \
+              "live/latest/privkey.pem"; then
+                cat "live/latest/fullchain.pem" \
+                  "live/latest/privkey.pem" > "${tmpchain}"
             fi
 
             if ! diff "${tmpchain}" "${CERTS}/public/${tld}-chain.pem"; then
-                cat "live/${dns_tld}/fullchain.pem" \
-                  "live/${dns_tld}/privkey.pem" \
+                cat "live/latest/fullchain.pem" \
+                  "live/latest/privkey.pem" \
                   > "${CERTS}/public/${tld}-chain.pem"
             fi
 
