@@ -8,12 +8,20 @@ SUBJECT_ALTERNATE_NAMES=${SUBJECT_ALTERNATE_NAMES:-*,*.devices,*.s3,*.img}
 SSH_KEY_NAMES=${SSH_KEY_NAMES:-devices,git,proxy}
 ca_http_url=${CA_HTTP_URL:-http://balena-ca:8888}
 attempts=${ATTEMPTS:-5}
+
+# shellcheck disable=SC2034
 country=${COUNTRY:-US}
+# shellcheck disable=SC2034
 state=${STATE:-Washington}
+# shellcheck disable=SC2034
 locality_name=${LOCALITY_NAME:-Seattle}
+# shellcheck disable=SC2034
 org=${ORG:-balena}
+# shellcheck disable=SC2034
 org_unit=${ORG_UNIT:-balenaCloud}
+# shellcheck disable=SC2034
 key_algo=${KEY_ALGO:-ecdsa}
+# shellcheck disable=SC2034
 key_size=${KEY_SIZE:-256}
 
 if [[ -n "${BALENA_DEVICE_UUID}" ]]; then
@@ -153,6 +161,7 @@ function cloudflare_issue_public_cert {
     certbot certonly --agree-tos --non-interactive --verbose --expand \
       --dns-cloudflare \
       --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
+      --cert-name "${dns_tld}" \
       -m "$(get_acme_email ${balena_device_uuid})" \
       -d "${dns_tld}" \
       -d "*.${dns_tld}" \
@@ -184,6 +193,7 @@ function gandi_issue_public_cert {
     certbot certonly --agree-tos --non-interactive --verbose --expand \
       --authenticator dns-gandi \
       --dns-gandi-credentials ~/.secrets/certbot/gandi.ini \
+      --cert-name "${dns_tld}" \
       -m "$(get_acme_email ${balena_device_uuid})" \
       -d "${dns_tld}" \
       -d "*.${dns_tld}" \
@@ -209,32 +219,40 @@ function issue_public_certs {
           || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
           || true
 
-        if [[ -f "live/${dns_tld}/fullchain.pem" ]] \
-          && [[ -f "live/${dns_tld}/privkey.pem" ]]; then
+        # refresh link to the latest certificate set
+        # https://community.letsencrypt.org/t/prevent-0001-xxxx-certificate-suffixes/66802/3
+        # https://community.letsencrypt.org/t/re-prevent-0001-xxxx-certificate-suffixes/83824
+        # shellcheck disable=SC2012
+        # shellcheck disable=SC2086
+        rm -f live/latest \
+          && ln -fs "$(cd live && ls -dt ${dns_tld}* | head -n1)" live/latest
+
+        if [[ -f "live/latest/fullchain.pem" ]] \
+          && [[ -f "live/latest/privkey.pem" ]]; then
             # only update if renewed
-            if ! diff "live/${dns_tld}/fullchain.pem" \
+            if ! diff "live/latest/fullchain.pem" \
               "${CERTS}/public/${tld}.pem"; then
-                cat < "live/${dns_tld}/fullchain.pem" \
+                cat < "live/latest/fullchain.pem" \
                   > "${CERTS}/public/${tld}.pem"
             fi
 
-            if ! diff "live/${dns_tld}/privkey.pem" \
+            if ! diff "live/latest/privkey.pem" \
               "${CERTS}/public/${tld}.key"; then
-                cat < "live/${dns_tld}/privkey.pem" \
+                cat < "live/latest/privkey.pem" \
                   > "${CERTS}/public/${tld}.key"
             fi
 
             tmpchain="$(mktemp)"
 
-            if ! diff "live/${dns_tld}/fullchain.pem" \
-              "live/${dns_tld}/privkey.pem"; then
-                cat "live/${dns_tld}/fullchain.pem" \
-                  "live/${dns_tld}/privkey.pem" > "${tmpchain}"
+            if ! diff "live/latest/fullchain.pem" \
+              "live/latest/privkey.pem"; then
+                cat "live/latest/fullchain.pem" \
+                  "live/latest/privkey.pem" > "${tmpchain}"
             fi
 
             if ! diff "${tmpchain}" "${CERTS}/public/${tld}-chain.pem"; then
-                cat "live/${dns_tld}/fullchain.pem" \
-                  "live/${dns_tld}/privkey.pem" \
+                cat "live/latest/fullchain.pem" \
+                  "live/latest/privkey.pem" \
                   > "${CERTS}/public/${tld}-chain.pem"
             fi
 
@@ -307,8 +325,10 @@ function generate_compute_all {
     compute_api_kid "${tld}"
     generate_vpn_dhparams "${tld}"
 
+    # shellcheck disable=SC2207
     ssh_key_names=($(echo "${SSH_KEY_NAMES}" | tr ',' ' '))
-    for kn in ${ssh_key_names[*]}; do
+    # shellcheck disable=SC2048
+    for kn in "${ssh_key_names[@]}"; do
         generate_ssh_keys "${kn}" "${tld}"
     done
 }
@@ -396,7 +416,7 @@ function resolve_sans {
     local arr
     arr=("${subject_alternate_names//,/ }")
     local sans
-    sans="$(for san in ${arr[*]}; do echo "-d ${san}.${tld}"; done)"
+    sans="$(for san in "${arr[@]}"; do echo "-d ${san}.${tld}"; done)"
     echo "${sans}"
     set +f
 }
@@ -415,7 +435,7 @@ function resolve_hosts {
     local arr
     arr=("${subject_alternate_names//,/ }")
     local hosts
-    hosts="$(for san in ${arr[*]}; do printf '%s.%s\n%s.%s\n' "${san}" "${tld}" "${san}" "${dns_tld}"; done | tr '\n' ',')"
+    hosts="$(for san in "${arr[@]}"; do printf '%s.%s\n%s.%s\n' "${san}" "${tld}" "${san}" "${dns_tld}"; done | tr '\n' ',')"
     echo "${hosts}"
     set +f
 }
@@ -447,9 +467,10 @@ function get_root_ca {
 }
 
 function resolve_templates() {
-    local tmptmpl="$(mktemp)"
+    tmptmpl="$(mktemp)"
+    local tmptmpl
     if [[ -f $1 ]]; then
-        cat "$1" | envsubst > "${tmptmpl}"
+        cat < "$1" | envsubst > "${tmptmpl}"
     else
         echo '[]' > "${tmptmpl}"
     fi
