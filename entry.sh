@@ -468,7 +468,6 @@ function get_root_ca {
 
 function resolve_templates() {
     tmptmpl="$(mktemp)"
-    local tmptmpl
     if [[ -f $1 ]]; then
         cat < "$1" | envsubst > "${tmptmpl}"
     else
