@@ -335,7 +335,7 @@ function generate_compute_all {
     # shellcheck disable=SC2207
     ssh_key_names=($(echo "${SSH_KEY_NAMES}" | tr ',' ' '))
     # shellcheck disable=SC2048
-    for kn in "${ssh_key_names[@]}"; do
+    for kn in ${ssh_key_names[*]}; do
         generate_ssh_keys "${kn}" "${tld}"
     done
 }
@@ -423,7 +423,8 @@ function resolve_sans {
     local arr
     arr=("${subject_alternate_names//,/ }")
     local sans
-    sans="$(for san in "${arr[@]}"; do echo "-d ${san}.${tld}"; done)"
+    # shellcheck disable=SC2048
+    sans="$(for san in ${arr[*]}; do echo "-d ${san}.${tld}"; done)"
     echo "${sans}"
     set +f
 }
@@ -442,7 +443,8 @@ function resolve_hosts {
     local arr
     arr=("${subject_alternate_names//,/ }")
     local hosts
-    hosts="$(for san in "${arr[@]}"; do printf '%s.%s\n%s.%s\n' "${san}" "${tld}" "${san}" "${dns_tld}"; done | tr '\n' ',')"
+    # shellcheck disable=SC2048
+    hosts="$(for san in ${arr[*]}; do printf '%s.%s\n%s.%s\n' "${san}" "${tld}" "${san}" "${dns_tld}"; done | tr '\n' ',')"
     echo "${hosts}"
     set +f
 }
