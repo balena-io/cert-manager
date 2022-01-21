@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -exa
+set -ea
+
+[[ "${VERBOSE}" =~ on|On|Yes|yes|true|True ]] && set -x
 
 CERTS=${CERTS:-/certs}
 EXPORT_CERT_CHAIN_PATH=${EXPORT_CERT_CHAIN_PATH:-${CERTS}/export/chain.pem}
@@ -224,8 +226,13 @@ function issue_public_certs {
         # https://community.letsencrypt.org/t/re-prevent-0001-xxxx-certificate-suffixes/83824
         # shellcheck disable=SC2012
         # shellcheck disable=SC2086
-        rm -f live/latest \
-          && ln -fs "$(cd live && ls -dt ${dns_tld}* | head -n1)" live/latest
+        if [[ -d live ]]; then
+            rm -f live/latest
+            current="$(ls -dt live/${dns_tld}* | head -n1)"
+            if [[ -n $current ]]; then
+                ln -fs "../${current}" live/latest
+            fi
+        fi
 
         if [[ -f "live/latest/fullchain.pem" ]] \
           && [[ -f "live/latest/privkey.pem" ]]; then
