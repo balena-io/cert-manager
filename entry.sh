@@ -9,7 +9,8 @@ EXPORT_CERT_CHAIN_PATH=${EXPORT_CERT_CHAIN_PATH:-${CERTS}/export/chain.pem}
 SUBJECT_ALTERNATE_NAMES=${SUBJECT_ALTERNATE_NAMES:-*,*.devices,*.s3,*.img}
 SSH_KEY_NAMES=${SSH_KEY_NAMES:-devices,git,proxy}
 ca_http_url=${CA_HTTP_URL:-http://balena-ca:8888}
-attempts=${ATTEMPTS:-5}
+attempts=${ATTEMPTS:-3}
+timeout=${TIMEOUT:-60}
 
 # shellcheck disable=SC2034
 country=${COUNTRY:-US}
@@ -36,12 +37,52 @@ fi
 
 rm -f "${CERTS}/.ready"
 
+function cleanup() {
+   remove_update_lock
+}
+
+trap 'cleanup' EXIT
+
+# https://coderwall.com/p/--eiqg/exponential-backoff-in-bash
+# https://letsencrypt.org/docs/integration-guide/#retrying-failures
+function with_backoff() {
+    local max_attempts=${attempts-5}
+    local timeout=${timeout-1}
+    local attempt=0
+    local exitCode=0
+
+    set +e
+    while [[ $attempt < $max_attempts ]]
+    do
+        "$@"
+        exitCode=$?
+
+        if [[ $exitCode == 0 ]]
+        then
+          break
+        fi
+
+        echo "Failure! Retrying in $timeout.." 1>&2
+        sleep "$timeout"
+        attempt=$(( attempt + 1 ))
+        timeout=$(( timeout * 2 ))
+    done
+
+    if [[ $exitCode != 0 ]]
+    then
+        echo "You've failed me for the last time! ($*)" 1>&2
+    fi
+
+    set -e
+    return $exitCode
+}
+
 function compute_api_kid {
     local tld
     tld="${1}"
     [[ -n "${tld}" ]] || return
 
-    if [[ -f "${CERTS}/private/api.${tld}.key" ]]; then
+    if [[ -s "${CERTS}/private/api.${tld}.key" ]]; then
         openssl ec \
           -in "${CERTS}/private/api.${tld}.key" \
           -pubout \
@@ -49,7 +90,7 @@ function compute_api_kid {
           -out "${CERTS}/private/api.${tld}.der"
     fi
 
-    if [[ -f "${CERTS}/private/api.${tld}.der" ]]; then
+    if [[ -s "${CERTS}/private/api.${tld}.der" ]]; then
         # https://github.com/balena-io/open-balena/blob/master/scripts/gen-token-auth-cert
         node --no-deprecation /opt/_keyid.js \
           "${CERTS}/private/api.${tld}.der" \
@@ -62,7 +103,7 @@ function generate_vpn_dhparams {
     tld="${1}"
     [[ -n "${tld}" ]] || return
 
-    if ! [[ -f "${CERTS}/private/dhparam.${tld}.pem" ]]; then
+    if ! [[ -s "${CERTS}/private/dhparam.${tld}.pem" ]]; then
         openssl dhparam -out "${CERTS}/private/dhparam.${tld}.pem" 2048
     fi
 }
@@ -80,7 +121,7 @@ function generate_ssh_keys {
         # (DSA) https://security.stackexchange.com/a/112818/201462
         for algo in rsa ecdsa dsa ed25519; do
             key="${CERTS}/private/${cn}.${tld}.${algo}.key"
-            if ! [[ -f "${key}" ]]; then
+            if ! [[ -s "${key}" ]]; then
                 # cfssl doesn't handle dsa and ed25519 key formats
                 ssh-keygen -f "${key}" -t "${algo}" -N "" -m PEM \
                   && chmod 0600 "${key}"
@@ -160,13 +201,12 @@ function cloudflare_issue_public_cert {
       && chmod 0600 ~/.secrets/certbot/cloudflare.ini
 
     # shellcheck disable=SC2086
-    certbot certonly --agree-tos --non-interactive --verbose --expand \
+    with_backoff certbot certonly --agree-tos --non-interactive --verbose --expand \
       --dns-cloudflare \
       --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
       --cert-name "${dns_tld}" \
       -m "$(get_acme_email ${balena_device_uuid})" \
       -d "${dns_tld}" \
-      -d "*.${dns_tld}" \
       ${sans}
 }
 
@@ -192,13 +232,12 @@ function gandi_issue_public_cert {
     pip install certbot-plugin-gandi
 
     # shellcheck disable=SC2086
-    certbot certonly --agree-tos --non-interactive --verbose --expand \
+    with_backoff certbot certonly --agree-tos --non-interactive --verbose --expand \
       --authenticator dns-gandi \
       --dns-gandi-credentials ~/.secrets/certbot/gandi.ini \
       --cert-name "${dns_tld}" \
       -m "$(get_acme_email ${balena_device_uuid})" \
       -d "${dns_tld}" \
-      -d "*.${dns_tld}" \
       ${sans}
 }
 
@@ -234,8 +273,8 @@ function issue_public_certs {
             fi
         fi
 
-        if [[ -f "live/latest/fullchain.pem" ]] \
-          && [[ -f "live/latest/privkey.pem" ]]; then
+        if [[ -s "live/latest/fullchain.pem" ]] \
+          && [[ -s "live/latest/privkey.pem" ]]; then
             # only update if renewed
             if ! diff "live/latest/fullchain.pem" \
               "${CERTS}/public/${tld}.pem"; then
@@ -271,7 +310,7 @@ function issue_public_certs {
 function issue_private_certs {
     local requests_certs
     requests_certs="${1}"
-    [[ -f "${requests_certs}" ]] || return
+    [[ -s "${requests_certs}" ]] || return
 
     # https://www.starkandwayne.com/blog/bash-for-loop-over-json-array-using-jq/
     for request in $(cat < "${requests_certs}" | jq -r '.[] | @base64'); do
@@ -282,7 +321,7 @@ function issue_private_certs {
         _jq '.' > "${tmprequest}"
         common_name="$(_jq '.request.CN')"
 
-        if ! [[ -f "${CERTS}/private/${common_name}.pem" ]]; then
+        if ! [[ -s "${CERTS}/private/${common_name}.pem" ]]; then
             cat < "${tmprequest}" | jq -r
 
             response="$(curl --retry "${attempts}" --fail \
@@ -300,7 +339,7 @@ function issue_private_certs {
 function issue_private_keys {
     local requests_keys
     requests_keys="${1}"
-    [[ -f "${requests_keys}" ]] || return
+    [[ -s "${requests_keys}" ]] || return
 
     for request in $(cat < "${requests_keys}" | jq -r '.[] | @base64'); do
         _jq() {
@@ -310,7 +349,7 @@ function issue_private_keys {
         _jq '.' > "${tmprequest}"
         common_name="$(_jq '.CN')"
 
-        if ! [[ -f "${CERTS}/private/${common_name}.key" ]]; then
+        if ! [[ -s "${CERTS}/private/${common_name}.key" ]]; then
             cat < "${tmprequest}" | jq -r
 
             response="$(curl --retry "${attempts}" --fail \
@@ -348,8 +387,8 @@ function resolve_cert_target {
     local target
     target=private
 
-    if [[ -f "${CERTS}/public/${tld}.pem" ]] \
-      && [[ -f "${CERTS}/public/${tld}.key" ]]; then
+    if [[ -s "${CERTS}/public/${tld}.pem" ]] \
+      && [[ -s "${CERTS}/public/${tld}.key" ]]; then
         target=public
     fi
 
@@ -368,14 +407,14 @@ function surface_resolved_cert_chain {
         # shellcheck disable=SC2235
         if ! [[ -L "${CERTS}/${cert}" ]] \
           || (! [[ "$(readlink -f "${CERTS}/${cert}")" =~ ${CERTS}\/${target}\/ ]]) \
-          && [[ -f "${CERTS}/${target}/${cert}" ]]; then
+          && [[ -s "${CERTS}/${target}/${cert}" ]]; then
             rm -f "${CERTS}/${cert}"
             ln -s "${CERTS}/${target}/${cert}" "${CERTS}/${cert}"
         fi
     done
 
     # shellcheck disable=SC2235
-    if [[ -f "${CERTS}/${target}/${tld}-chain.pem" ]]; then
+    if [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
         if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then
             rm -f "${EXPORT_CERT_CHAIN_PATH}"
             ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
@@ -389,7 +428,7 @@ function assemble_private_cert_chain {
     tld="${1}"
     [[ -n "${tld}" ]] || return
 
-    if ! [[ -f "${CERTS}/private/${tld}-chain.pem" ]]; then
+    if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]]; then
         cat "${CERTS}/private/${tld}.pem" \
           "${CERTS}/private/server-ca.${tld}.pem" \
           "${CERTS}/private/root-ca.${tld}.pem" \
@@ -405,7 +444,7 @@ function surface_root_certs {
 
     for cert in ca-bundle server-ca root-ca; do
         if ! [[ -L "${CERTS}/${cert}.pem" ]] \
-          && [[ -f "${CERTS}/private/${cert}.${tld}.pem" ]]; then
+          && [[ -s "${CERTS}/private/${cert}.${tld}.pem" ]]; then
             ln -s "${CERTS}/private/${cert}.${tld}.pem" "${CERTS}/${cert}.pem"
         fi
     done
@@ -414,17 +453,20 @@ function surface_root_certs {
 function resolve_sans {
     # https://stackoverflow.com/a/11456496/1559300
     set -f
+    local dns_tld
+    dns_tld="${1}"
+    [[ -n "${dns_tld}" ]] || return
     local tld
-    tld="${1}"
+    tld="${2}"
     [[ -n "${tld}" ]] || return
     local subject_alternate_names
-    subject_alternate_names="${2}"
+    subject_alternate_names="${3}"
     [[ -n "${subject_alternate_names}" ]] || return
     local arr
     arr=("${subject_alternate_names//,/ }")
     local sans
     # shellcheck disable=SC2048
-    sans="$(for san in ${arr[*]}; do echo "-d ${san}.${tld}"; done)"
+    sans="$(for san in ${arr[*]}; do echo "-d ${san}.${tld} -d ${san}.${dns_tld}"; done)"
     echo "${sans}"
     set +f
 }
@@ -455,7 +497,7 @@ function get_server_ca {
     [[ -n "${tld}" ]] || return
 
     # shellcheck disable=SC2153
-    if ! [[ -f "${CERTS}/private/server-ca.${tld}.pem" ]]; then
+    if ! [[ -s "${CERTS}/private/server-ca.${tld}.pem" ]]; then
         curl --retry "${attempts}" --fail "${ca_http_url}/api/v1/cfssl/info" \
           --data '{"label": "primary"}' \
           | jq -r '.result.certificate' > "${CERTS}/private/server-ca.${tld}.pem"
@@ -468,7 +510,7 @@ function get_root_ca {
     [[ -n "${tld}" ]] || return
 
     # shellcheck disable=SC2153
-    if ! [[ -f "${CERTS}/private/root-ca.${tld}.pem" ]]; then
+    if ! [[ -s "${CERTS}/private/root-ca.${tld}.pem" ]]; then
         curl --retry "${attempts}" --fail "${ca_http_url}/api/v1/cfssl/bundle" \
           --data "{\"certificate\": \"$(cat < "${CERTS}/private/server-ca.${tld}.pem" | awk '{printf "%s\\n", $0}')\"}" \
           | jq -r '.result.root' > "${CERTS}/private/root-ca.${tld}.pem"
@@ -477,12 +519,33 @@ function get_root_ca {
 
 function resolve_templates() {
     tmptmpl="$(mktemp)"
-    if [[ -f $1 ]]; then
+    if [[ -s $1 ]]; then
         cat < "$1" | envsubst > "${tmptmpl}"
     else
         echo '[]' > "${tmptmpl}"
     fi
     echo "${tmptmpl}"
+}
+
+function set_update_lock {
+    while [[ $(curl --silent --retry "${attempts}" --fail \
+      "${BALENA_SUPERVISOR_ADDRESS}/v1/device?apikey=${BALENA_SUPERVISOR_API_KEY}" \
+      -H "Content-Type: application/json" | jq -r '.update_pending') == 'true' ]]; do
+
+        curl --silent --retry "${attempts}" --fail \
+          "${BALENA_SUPERVISOR_ADDRESS}/v1/device?apikey=${BALENA_SUPERVISOR_API_KEY}" \
+          -H "Content-Type: application/json" | jq -r
+
+        sleep "$(( (RANDOM % 1) + 1 ))s"
+    done
+    sleep "$(( (RANDOM % 5) + 5 ))s"
+
+    # https://www.balena.io/docs/learn/deploy/release-strategy/update-locking/
+    lockfile /tmp/balena/updates.lock
+}
+
+function remove_update_lock() {
+    rm -f /tmp/balena/updates.lock
 }
 
 mkdir -p "${CERTS}/public" "${CERTS}/private" "$(dirname "${EXPORT_CERT_CHAIN_PATH}")"
@@ -494,7 +557,10 @@ get_root_ca "${TLD}"
 
 hosts="$(resolve_hosts "${DNS_TLD}" "${TLD}" "${SUBJECT_ALTERNATE_NAMES}")"
 hosts="$(jq -c -n --arg hosts "${hosts::-1}" '$hosts | split(",")')"
-sans="$(resolve_sans "${TLD}" "${SUBJECT_ALTERNATE_NAMES}")"
+sans="$(resolve_sans "${DNS_TLD}" "${TLD}" "${SUBJECT_ALTERNATE_NAMES}")"
+
+# enter critical section
+set_update_lock
 
 # generate cryptographic assets
 issue_private_certs "$(resolve_templates /opt/certs.json)"
@@ -507,6 +573,9 @@ surface_resolved_cert_chain "${TLD}"
 
 # signal healthy
 touch "${CERTS}/.ready"
+
+# remove lock
+remove_update_lock
 
 # (TBC) exit-restart in 7 days and check for renewal (LetEncrypt only)
 sleep 7d
