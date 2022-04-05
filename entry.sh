@@ -11,6 +11,7 @@ SSH_KEY_NAMES=${SSH_KEY_NAMES:-devices,git,proxy}
 ca_http_url=${CA_HTTP_URL:-http://balena-ca:8888}
 attempts=${ATTEMPTS:-3}
 timeout=${TIMEOUT:-60}
+cert_seconds_until_expiry=${CERT_SECONDS_UNTIL_EXPIRY:-604800} # 7 days
 
 # shellcheck disable=SC2034
 country=${COUNTRY:-US}
@@ -27,7 +28,7 @@ key_algo=${KEY_ALGO:-ecdsa}
 # shellcheck disable=SC2034
 key_size=${KEY_SIZE:-256}
 
-if [[ -n "${BALENA_DEVICE_UUID}" ]]; then
+if [[ -n $BALENA_DEVICE_UUID ]]; then
     # prepend the device UUID if running on balenaOS
     # shellcheck disable=SC2153
     TLD="${BALENA_DEVICE_UUID}.${DNS_TLD}"
@@ -39,6 +40,7 @@ rm -f "${CERTS}/.ready"
 
 function cleanup() {
    remove_update_lock
+
 }
 
 trap 'cleanup' EXIT
@@ -136,48 +138,51 @@ function generate_ssh_keys {
 }
 
 function get_acme_email {
-    local balena_device_uuid
-    balena_device_uuid="${1}"
-    [[ -n "${balena_device_uuid}" ]] || return
-
-    if [[ -n "${ACME_EMAIL}" ]]; then
+    if [[ -n $ACME_EMAIL ]]; then
         acme_email="${ACME_EMAIL}"
     else
-        # shellcheck disable=SC2153
-        acme_email="$(curl --retry "${attempts}" --fail "${BALENA_API_URL}/user/v1/whoami" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer $(get_env_var_value "${balena_device_uuid}" API_TOKEN)" \
-          --compressed | jq -r '.email')"
+        if [[ -n $BALENA_API_URL ]]; then
+            local balena_device_uuid
+            balena_device_uuid="${1}"
+            [[ -n "${balena_device_uuid}" ]] || return
+
+            # shellcheck disable=SC2153
+            acme_email="$(curl --retry "${attempts}" --fail "${BALENA_API_URL}/user/v1/whoami" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $(get_env_var_value "${balena_device_uuid}" API_TOKEN)" \
+              --compressed | jq -r '.email')"
+        fi
     fi
     echo "${acme_email}"
 }
 
 function get_env_var_value {
-    local balena_device_uuid
-    balena_device_uuid="${1}"
-    [[ -n "${balena_device_uuid}" ]] || return
-
     local varname
     varname="${2}"
     [[ -n "${varname}" ]] || return
-
 
     local varval
     varval=${!varname}
 
     if [[ -z "$varval" ]]; then
-        balena_device_id="$(curl --retry "${attempts}" --fail \
-          "${BALENA_API_URL}/v6/device?\$filter=uuid%20eq%20'${balena_device_uuid}'" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer ${BALENA_API_KEY}" \
-          --compressed | jq -r .d[].id)"
+        if [[ -n $BALENA_API_URL ]] && [[ -n $BALENA_API_KEY ]]; then
+            local balena_device_uuid
+            balena_device_uuid="${1}"
+            [[ -n "${balena_device_uuid}" ]] || return
 
-        varval="$(curl --retry "${attempts}" --fail \
-          "${BALENA_API_URL}/v6/device_service_environment_variable?\$filter=service_install/device%20eq%20${balena_device_id}" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer ${BALENA_API_KEY}" \
-          --compressed \
-          | jq -r --arg varname "${varname}" '.d[] | select(.name==$varname).value')"
+            balena_device_id="$(curl --retry "${attempts}" --fail \
+              "${BALENA_API_URL}/v6/device?\$filter=uuid%20eq%20'${balena_device_uuid}'" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${BALENA_API_KEY}" \
+              --compressed | jq -r .d[].id)"
+
+            varval="$(curl --retry "${attempts}" --fail \
+              "${BALENA_API_URL}/v6/device_service_environment_variable?\$filter=service_install/device%20eq%20${balena_device_id}" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${BALENA_API_KEY}" \
+              --compressed \
+              | jq -r --arg varname "${varname}" '.d[] | select(.name==$varname).value')"
+        fi
     fi
     echo "${varval}"
 }
@@ -185,7 +190,6 @@ function get_env_var_value {
 function cloudflare_issue_public_cert {
     local balena_device_uuid
     balena_device_uuid="${1}"
-    [[ -n "${balena_device_uuid}" ]] || return
 
     local dns_tld
     dns_tld="${2}"
@@ -213,7 +217,6 @@ function cloudflare_issue_public_cert {
 function gandi_issue_public_cert {
     local balena_device_uuid
     balena_device_uuid="${1}"
-    [[ -n "${balena_device_uuid}" ]] || return
 
     local dns_tld
     dns_tld="${2}"
@@ -244,7 +247,6 @@ function gandi_issue_public_cert {
 function issue_public_certs {
     local balena_device_uuid
     balena_device_uuid="${1}"
-    [[ -n "${balena_device_uuid}" ]] || return
 
     local dns_tld
     dns_tld="${2}"
@@ -517,6 +519,24 @@ function get_root_ca {
     fi
 }
 
+function check_pub_cert_expiry() {
+    expiry_check="$(openssl x509 -noout \
+      -checkend "${cert_seconds_until_expiry}" \
+      -in "${EXPORT_CERT_CHAIN_PATH}")"
+
+    echo "${EXPORT_CERT_CHAIN_PATH} ${expiry_check} in $(( cert_seconds_until_expiry / 60 / 60 / 24 )) days"
+
+    if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
+        exit
+    fi
+}
+
+function check_self_signed_certs_expiry() {
+    find "${CERTS}/private" -type f -name '*.pem' \
+      | grep -v dhparam \
+      | xargs -t -I{} openssl x509 -noout -checkend "${cert_seconds_until_expiry}" -in {}
+}
+
 function resolve_templates() {
     tmptmpl="$(mktemp)"
     if [[ -s $1 ]]; then
@@ -528,20 +548,22 @@ function resolve_templates() {
 }
 
 function set_update_lock {
-    while [[ $(curl --silent --retry "${attempts}" --fail \
-      "${BALENA_SUPERVISOR_ADDRESS}/v1/device?apikey=${BALENA_SUPERVISOR_API_KEY}" \
-      -H "Content-Type: application/json" | jq -r '.update_pending') == 'true' ]]; do
-
-        curl --silent --retry "${attempts}" --fail \
+    if [[ -n $BALENA_SUPERVISOR_ADDRESS ]] && [[ -n $BALENA_SUPERVISOR_API_KEY ]]; then
+        while [[ $(curl --silent --retry "${attempts}" --fail \
           "${BALENA_SUPERVISOR_ADDRESS}/v1/device?apikey=${BALENA_SUPERVISOR_API_KEY}" \
-          -H "Content-Type: application/json" | jq -r
+          -H "Content-Type: application/json" | jq -r '.update_pending') == 'true' ]]; do
 
-        sleep "$(( (RANDOM % 1) + 1 ))s"
-    done
-    sleep "$(( (RANDOM % 5) + 5 ))s"
+            curl --silent --retry "${attempts}" --fail \
+              "${BALENA_SUPERVISOR_ADDRESS}/v1/device?apikey=${BALENA_SUPERVISOR_API_KEY}" \
+              -H "Content-Type: application/json" | jq -r
 
-    # https://www.balena.io/docs/learn/deploy/release-strategy/update-locking/
-    lockfile /tmp/balena/updates.lock
+            sleep "$(( (RANDOM % 1) + 1 ))s"
+        done
+        sleep "$(( (RANDOM % 5) + 5 ))s"
+
+        # https://www.balena.io/docs/learn/deploy/release-strategy/update-locking/
+        lockfile /tmp/balena/updates.lock
+    fi
 }
 
 function remove_update_lock() {
@@ -577,5 +599,11 @@ touch "${CERTS}/.ready"
 # remove lock
 remove_update_lock
 
-# (TBC) exit-restart in 7 days and check for renewal (LetEncrypt only)
-sleep 7d
+# exit-restart if near expiration (LetEncrypt only)
+while true; do
+    check_pub_cert_expiry
+
+    check_self_signed_certs_expiry
+
+    sleep 1d
+done
