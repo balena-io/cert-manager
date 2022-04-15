@@ -25,7 +25,8 @@
         "size": ${key_size}
       },
       "hosts": [
-        "vpn.${TLD}"
+        "vpn.${TLD}",
+        "cloudlink.${TLD}"
       ],
       "names": [
         {
