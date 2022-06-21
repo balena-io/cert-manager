@@ -9,6 +9,7 @@ EXPORT_CERT_CHAIN_PATH=${EXPORT_CERT_CHAIN_PATH:-${CERTS}/export/chain.pem}
 SUBJECT_ALTERNATE_NAMES=${SUBJECT_ALTERNATE_NAMES:-*,*.devices,*.s3,*.img}
 SSH_KEY_NAMES=${SSH_KEY_NAMES:-devices,git,proxy}
 ca_http_url=${CA_HTTP_URL:-http://balena-ca:8888}
+dns_cloudflare_propagation_seconds=${DNS_CLOUDFLARE_PROPAGATION_SECONDS:-60}
 attempts=${ATTEMPTS:-3}
 timeout=${TIMEOUT:-60}
 cert_seconds_until_expiry=${CERT_SECONDS_UNTIL_EXPIRY:-604800} # 7 days
@@ -207,6 +208,7 @@ function cloudflare_issue_public_cert {
     # shellcheck disable=SC2086
     with_backoff certbot certonly --agree-tos --non-interactive --verbose --expand \
       --dns-cloudflare \
+      --dns-cloudflare-propagation-seconds "${dns_cloudflare_propagation_seconds}" \
       --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
       --cert-name "${dns_tld}" \
       -m "$(get_acme_email ${balena_device_uuid})" \
