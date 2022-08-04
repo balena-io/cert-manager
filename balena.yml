@@ -1,0 +1,40 @@
+name: cert-manager
+type: sw.application
+description: >-
+  issues wildcard [ACME](https://letsencrypt.org/) and [private](https://github.com/balena-io/ca-private) SSL certificates
+
+fleetcta: Go nuts
+post-provisioning: >-
+  ## Usage instructions
+
+  ACME certificates verification uses [dns-01-challenge](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge)
+
+
+  **Instructions**
+  - add dependency on [balena-ca](https://github.com/balena-io/ca-private) service
+  - map persistent volumes (`/certs`, `/balena` and `/etc/letsencrypt`)
+  - configure using environment variables
+
+
+  **Supported DNS Plugins**
+  - [Gandi](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins)
+  - [CloudFlare](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins)
+
+assets:
+  repository:
+    type: blob.asset
+    data:
+      url: 'https://github.com/balenablocks/cert-manager'
+  logo:
+    type: blob.asset
+    data:
+      url: 'https://raw.githubusercontent.com/balenablocks/cert-manager/master/logo.png'
+data:
+  defaultDeviceType: genericx86-64-ext
+  supportedDeviceTypes:
+    - generic-amd64
+    - genericx86-64-ext
+    - intel-nuc
+    - qemux86
+    - qemux86-64
+version: 0.1.1
