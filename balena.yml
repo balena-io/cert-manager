@@ -1,21 +1,23 @@
 name: cert-manager
 type: sw.application
-description: >-
-  issues wildcard [ACME](https://letsencrypt.org/) and
-  [private](https://github.com/balena-io/ca-private) SSL certificates
-
+description: Issues wildcard [ACME](https://letsencrypt.org/) and [private](https://github.com/balena-io/ca-private) SSL certificates.
 fleetcta: Go nuts
-post-provisioning: >-
+post-provisioning: |
   [![balena](https://github.com/balenablocks/cert-manager/actions/workflows/balena.yml/badge.svg)](https://github.com/balenablocks/cert-manager/actions/workflows/balena.yml)
 
-  ## Usage instructions > ACME certificates verification uses [dns-01-challenge](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge)
+  ## Usage instructions
+  > ACME certificates verification uses [dns-01-challenge](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge)
 
-  * add dependency on [balena-ca](https://github.com/balena-io/ca-private) service * map persistent volumes (`/certs`, `/balena` and `/etc/letsencrypt`) * configure using environment variables
+  * add dependency on [balena-ca](https://github.com/balena-io/ca-private) service
+  * map persistent volumes (`/certs`, `/balena` and `/etc/letsencrypt`)
+  * configure using environment variables
 
 
-  ### Supported DNS Plugins > See, https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins
+  ### Supported DNS Plugins
+  > See, https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins
 
-  * Gandi * CloudFlare
+  * Gandi
+  * CloudFlare
 
 assets:
   repository:
