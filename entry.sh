@@ -4,6 +4,9 @@ set -ea
 
 [[ "${VERBOSE}" =~ on|On|Yes|yes|true|True ]] && set -x
 
+AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-https://s3.amazonaws.com}
+AWS_REGION=${AWS_REGION:-us-east-1}
+AWS_DEFAULT_REGION=${AWS_REGION}
 CERTS=${CERTS:-/certs}
 EXPORT_CERT_CHAIN_PATH=${EXPORT_CERT_CHAIN_PATH:-${CERTS}/export/chain.pem}
 SUBJECT_ALTERNATE_NAMES=${SUBJECT_ALTERNATE_NAMES:-*,*.devices,*.s3,*.img}
@@ -246,6 +249,39 @@ function gandi_issue_public_cert {
       ${sans}
 }
 
+function s3_init() {
+    if [[ -n $AWS_ACCESS_KEY_ID ]] && [[ -n $AWS_SECRET_ACCESS_KEY ]]; then
+        mcli alias set s3 "https://${AWS_S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
+    else
+        false
+    fi
+}
+
+function backup_certs_to_s3 {
+    if [[ -n $AWS_BUCKET ]]; then
+        local certs_data
+        certs_data="${1}"
+
+        (s3_init && mcli cp --recursive "${certs_data}" "s3/${AWS_BUCKET}/") || true
+	fi
+}
+
+function restore_certs_from_s3 {
+    if [[ -n $AWS_BUCKET ]]; then
+        local certs_data
+        certs_data="${1}"
+
+        local dns_tld
+        dns_tld="${2}"
+        [[ -n "${dns_tld}" ]] || return
+
+        local current
+        current="$(ls -dt ${certs_data}/${dns_tld}* | head -n1)"
+
+        (s3_init && mcli cp --recursive "s3/${AWS_BUCKET}/" "${current}") || true
+    fi
+}
+
 function issue_public_certs {
     local balena_device_uuid
     balena_device_uuid="${1}"
@@ -259,6 +295,8 @@ function issue_public_certs {
     [[ -n "${tld}" ]] || return
 
     if ! [[ $dns_tld =~ ^.*\.local\.? ]]; then
+        restore_certs_from_s3 live "${dns_tld}"
+
         # chain breaks after first success
         cloudflare_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
           || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
@@ -275,34 +313,31 @@ function issue_public_certs {
             if [[ -n $current ]]; then
                 ln -fs "../${current}" live/latest
             fi
+
+            backup_certs_to_s3 live/latest/
         fi
 
-        if [[ -s "live/latest/fullchain.pem" ]] \
-          && [[ -s "live/latest/privkey.pem" ]]; then
+        if [[ -s "live/latest/fullchain.pem" ]] && [[ -s "live/latest/privkey.pem" ]]; then
             # only update if renewed
             if ! diff "live/latest/fullchain.pem" \
               "${CERTS}/public/${tld}.pem"; then
-                cat < "live/latest/fullchain.pem" \
-                  > "${CERTS}/public/${tld}.pem"
+                cat < "live/latest/fullchain.pem" > "${CERTS}/public/${tld}.pem"
             fi
 
             if ! diff "live/latest/privkey.pem" \
               "${CERTS}/public/${tld}.key"; then
-                cat < "live/latest/privkey.pem" \
-                  > "${CERTS}/public/${tld}.key"
+                cat < "live/latest/privkey.pem" > "${CERTS}/public/${tld}.key"
             fi
 
             tmpchain="$(mktemp)"
 
             if ! diff "live/latest/fullchain.pem" \
               "live/latest/privkey.pem"; then
-                cat "live/latest/fullchain.pem" \
-                  "live/latest/privkey.pem" > "${tmpchain}"
+                cat "live/latest/fullchain.pem" "live/latest/privkey.pem" > "${tmpchain}"
             fi
 
             if ! diff "${tmpchain}" "${CERTS}/public/${tld}-chain.pem"; then
-                cat "live/latest/fullchain.pem" \
-                  "live/latest/privkey.pem" \
+                cat "live/latest/fullchain.pem" "live/latest/privkey.pem" \
                   > "${CERTS}/public/${tld}-chain.pem"
             fi
 
