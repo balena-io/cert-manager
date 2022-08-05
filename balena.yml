@@ -1,6 +1,7 @@
 name: cert-manager
 type: sw.application
-description: Issues wildcard [ACME](https://letsencrypt.org/) and [private](https://github.com/balena-io/ca-private) SSL certificates.
+description: Issues wildcard [ACME](https://letsencrypt.org/) and
+  [private](https://github.com/balena-io/ca-private) SSL certificates.
 fleetcta: Go nuts
 post-provisioning: |
   [![balena](https://github.com/balenablocks/cert-manager/actions/workflows/balena.yml/badge.svg)](https://github.com/balenablocks/cert-manager/actions/workflows/balena.yml)
@@ -36,4 +37,4 @@ data:
     - intel-nuc
     - qemux86
     - qemux86-64
-version: 0.1.3
+version: 0.1.4
