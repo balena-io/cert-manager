@@ -1,9 +1,9 @@
 # https://hub.docker.com/r/certbot/certbot
 # https://hub.docker.com/r/certbot/dns-cloudflare
 ARG ARCH=amd64
-FROM certbot/dns-cloudflare:${ARCH}-v1.22.0
+FROM certbot/dns-cloudflare:${ARCH}-v1.30.0
 
-ARG MINIOCLI_VERSION=20220729191716.0.0
+ARG MINIOCLI_VERSION=20220916091647.0.0
 
 RUN apk add --no-cache \
     bash \
