@@ -258,16 +258,16 @@ function s3_init() {
 }
 
 function backup_certs_to_s3 {
-    if [[ -n $AWS_BUCKET ]]; then
+    if [[ -n $AWS_S3_BUCKET ]]; then
         local certs_data
         certs_data="${1}"
 
-        (s3_init && mcli cp --recursive "${certs_data}" "s3/${AWS_BUCKET}/") || true
+        (s3_init && mcli cp --recursive "${certs_data}" "s3/${AWS_S3_BUCKET}/") || true
 	fi
 }
 
 function restore_certs_from_s3 {
-    if [[ -n $AWS_BUCKET ]]; then
+    if [[ -n $AWS_S3_BUCKET ]]; then
         local certs_data
         certs_data="${1}"
 
@@ -278,7 +278,7 @@ function restore_certs_from_s3 {
         local current
         current="$(ls -dt ${certs_data}/${dns_tld}* | head -n1)"
 
-        (s3_init && mcli cp --recursive "s3/${AWS_BUCKET}/" "${current}") || true
+        (s3_init && mcli cp --recursive "s3/${AWS_S3_BUCKET}/" "${current}") || true
     fi
 }
 
