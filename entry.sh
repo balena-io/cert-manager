@@ -251,7 +251,7 @@ function gandi_issue_public_cert {
 
 function s3_init() {
     if [[ -n $AWS_ACCESS_KEY_ID ]] && [[ -n $AWS_SECRET_ACCESS_KEY ]]; then
-        mcli alias set s3 "https://${AWS_S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
+        mcli alias set s3 "${AWS_S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
     else
         false
     fi
