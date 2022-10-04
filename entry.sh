@@ -258,34 +258,27 @@ function s3_init() {
 }
 
 function backup_certs_to_s3 {
-    if [[ -n $AWS_S3_BUCKET ]]; then
-        local certs_data
-        certs_data="${1}"
+    local dns_tld
+    dns_tld="${1}"
 
-        if [[ -d $certs_data ]]; then
-            (s3_init && mcli cp --recursive "${certs_data}" "s3/${AWS_S3_BUCKET}/") || true
-        fi
-	fi
+    if [[ -n $AWS_S3_BUCKET ]]; then
+        tar -cpvzf "/tmp/${dns_tld}.tgz" *
+        (s3_init && mcli cp --recursive "/tmp/${dns_tld}.tgz" "s3/${AWS_S3_BUCKET}/") || true
+        rm -f "/tmp/${dns_tld}.tgz"
+    fi
 }
 
 function restore_certs_from_s3 {
+    local dns_tld
+    dns_tld="${1}"
+
     if [[ -n $AWS_S3_BUCKET ]]; then
-        local certs_data
-        certs_data="${1}"
+        (s3_init && mcli cp --recursive "s3/${AWS_S3_BUCKET}/${dns_tld}.tgz" /tmp) || true
 
-        local dns_tld
-        dns_tld="${2}"
-        [[ -n "${dns_tld}" ]] || return
-
-        local current
-        current="$(ls -dt ${certs_data}/${dns_tld}* | head -n1)"
-
-        if ! [[ -d $current ]]; then
-            current="${certs_data}/${dns_tld}"
-            mkdir -p "${current}"
+        if [[ -e /tmp/$dns_tld.tgz ]]; then
+            tar -xvf "/tmp/${dns_tld}.tgz"
+            rm -f "/tmp/${dns_tld}.tgz"
         fi
-
-        (s3_init && mcli cp --recursive "s3/${AWS_S3_BUCKET}/" "${current}") || true
     fi
 }
 
@@ -302,7 +295,7 @@ function issue_public_certs {
     [[ -n "${tld}" ]] || return
 
     if ! [[ $dns_tld =~ ^.*\.local\.? ]]; then
-        restore_certs_from_s3 live "${dns_tld}"
+        restore_certs_from_s3 "${dns_tld}"
 
         # chain breaks after first success
         cloudflare_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
@@ -321,7 +314,7 @@ function issue_public_certs {
                 ln -fs "../${current}" live/latest
             fi
 
-            backup_certs_to_s3 live/latest/
+            backup_certs_to_s3 "${dns_tld}"
         fi
 
         if [[ -s "live/latest/fullchain.pem" ]] && [[ -s "live/latest/privkey.pem" ]]; then
