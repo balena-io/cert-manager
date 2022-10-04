@@ -1,4 +1,16 @@
 - commits:
+    - subject: Create PKI directory structure
+      hash: 696bc9e9e876a6139dade6b993e2e526d78f36a6
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+  version: 0.1.7
+  title: ""
+  date: 2022-10-04T19:21:19.600Z
+- commits:
     - subject: Correct S3 endpoint and move to Flowzone
       hash: a67426dd2e50ebdc497562c1fadf13a8e3d28b63
       body: ""
