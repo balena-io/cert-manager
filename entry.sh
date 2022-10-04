@@ -262,7 +262,9 @@ function backup_certs_to_s3 {
         local certs_data
         certs_data="${1}"
 
-        (s3_init && mcli cp --recursive "${certs_data}" "s3/${AWS_S3_BUCKET}/") || true
+        if [[ -d $certs_data ]]; then
+            (s3_init && mcli cp --recursive "${certs_data}" "s3/${AWS_S3_BUCKET}/") || true
+        fi
 	fi
 }
 
@@ -277,6 +279,11 @@ function restore_certs_from_s3 {
 
         local current
         current="$(ls -dt ${certs_data}/${dns_tld}* | head -n1)"
+
+        if ! [[ -d $current ]]; then
+            current="${certs_data}/${dns_tld}"
+            mkdir -p "${current}"
+        fi
 
         (s3_init && mcli cp --recursive "s3/${AWS_S3_BUCKET}/" "${current}") || true
     fi
