@@ -1,4 +1,16 @@
 - commits:
+    - subject: Backup entire ACME directory
+      hash: 6d017e1a6e1224b248c06b957d3c713579fce2a9
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+  version: 0.1.8
+  title: ""
+  date: 2022-10-05T13:26:58.648Z
+- commits:
     - subject: Create PKI directory structure
       hash: 696bc9e9e876a6139dade6b993e2e526d78f36a6
       body: ""
