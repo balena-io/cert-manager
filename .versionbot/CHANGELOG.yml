@@ -1,4 +1,16 @@
 - commits:
+    - subject: "Flowzone: use inherited secrets"
+      hash: 040796c4eca125379e7d8cf4d027b9371cde1b36
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Page-
+      nested: []
+  version: 0.1.9
+  title: ""
+  date: 2022-10-10T16:42:38.806Z
+- commits:
     - subject: Backup entire ACME directory
       hash: 6d017e1a6e1224b248c06b957d3c713579fce2a9
       body: ""
