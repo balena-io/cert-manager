@@ -262,7 +262,7 @@ function backup_certs_to_s3 {
     dns_tld="${1}"
 
     if [[ -n $AWS_S3_BUCKET ]]; then
-        tar -cpvzf "/tmp/${dns_tld}.tgz" *
+        tar -cpvzf "/tmp/${dns_tld}.tgz" --exclude='accounts' --exclude='renewal-hooks' *
         (s3_init && mcli cp --recursive "/tmp/${dns_tld}.tgz" "s3/${AWS_S3_BUCKET}/") || true
         rm -f "/tmp/${dns_tld}.tgz"
     fi
