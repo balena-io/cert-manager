@@ -1,4 +1,16 @@
 - commits:
+    - subject: Exclude accounts/hooks from backup
+      hash: 164fb29746a0798a4b858d91b8226f97e7f41bb7
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+  version: 0.1.10
+  title: ""
+  date: 2022-10-10T17:12:19.504Z
+- commits:
     - subject: "Flowzone: use inherited secrets"
       hash: 040796c4eca125379e7d8cf4d027b9371cde1b36
       body: ""
