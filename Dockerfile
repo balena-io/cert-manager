@@ -3,7 +3,7 @@
 ARG ARCH=amd64
 FROM certbot/dns-cloudflare:${ARCH}-v1.30.0
 
-ARG MINIOCLI_VERSION=20221001075614.0.0
+ARG MINIOCLI_VERSION=20221009211059.0.0
 
 RUN apk add --no-cache \
     bash \
