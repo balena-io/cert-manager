@@ -297,10 +297,15 @@ function issue_public_certs {
     if ! [[ $dns_tld =~ ^.*\.local\.? ]]; then
         restore_certs_from_s3 "${dns_tld}"
 
-        # chain breaks after first success
-        cloudflare_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
-          || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
-          || true
+        current="$(ls -dt live/${dns_tld}* | head -n1)"
+
+        # only attempt to renew if the certificate is near expiry
+        if ! check_pub_cert_expiry "${current}/cert.pem"; then
+			# chain breaks after first success
+			cloudflare_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
+			  || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
+			  || true
+        fi
 
         # refresh link to the latest certificate set
         # https://community.letsencrypt.org/t/prevent-0001-xxxx-certificate-suffixes/66802/3
@@ -557,14 +562,16 @@ function get_root_ca {
 }
 
 function check_pub_cert_expiry() {
+    [[ -e $1 ]] || return 1
+
     expiry_check="$(openssl x509 -noout \
       -checkend "${cert_seconds_until_expiry}" \
-      -in "${EXPORT_CERT_CHAIN_PATH}")"
+      -in "$1")"
 
-    echo "${EXPORT_CERT_CHAIN_PATH} ${expiry_check} in $(( cert_seconds_until_expiry / 60 / 60 / 24 )) days"
+    echo "$1 ${expiry_check} in $(( cert_seconds_until_expiry / 60 / 60 / 24 )) days"
 
     if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
-        exit
+        return 1
     fi
 }
 
@@ -638,7 +645,7 @@ remove_update_lock
 
 # exit-restart if near expiration (LetEncrypt only)
 while true; do
-    check_pub_cert_expiry
+    if ! check_pub_cert_expiry "${EXPORT_CERT_CHAIN_PATH}"; then exit; fi
 
     check_self_signed_certs_expiry
 
