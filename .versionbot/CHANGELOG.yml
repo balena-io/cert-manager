@@ -1,4 +1,17 @@
 - commits:
+    - subject: Don't hammer ACME with cert requests
+      hash: 947c0283b7bb8d457e09374c7a37a4fde40c1daa
+      body: |
+        * if a valid cert is retrieved from S3 backup, use it
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+  version: 0.1.11
+  title: ""
+  date: 2022-10-11T19:31:59.882Z
+- commits:
     - subject: Exclude accounts/hooks from backup
       hash: 164fb29746a0798a4b858d91b8226f97e7f41bb7
       body: ""
