@@ -458,11 +458,15 @@ function surface_resolved_cert_chain {
     done
 
     # shellcheck disable=SC2235
-    if [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
-        if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then
-            rm -f "${EXPORT_CERT_CHAIN_PATH}"
-            ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
+    if ! [[ -e "${EXPORT_CERT_CHAIN_PATH}" ]];  then
+        if [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
+            if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then
+                rm -f "${EXPORT_CERT_CHAIN_PATH}"
+                ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
+            fi
         fi
+    else
+        echo "certificate at '${EXPORT_CERT_CHAIN_PATH}' is not a link"
     fi
 }
 
