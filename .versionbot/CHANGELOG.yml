@@ -1,4 +1,16 @@
 - commits:
+    - subject: Allow plain TLD certs without UUID
+      hash: f9c7f20e9b0d02bda91fc249f4ab890f594380c3
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+  version: 0.1.13
+  title: ""
+  date: 2022-11-30T02:06:19.576Z
+- commits:
     - subject: Don't clobber custom certs
       hash: abd15653c0a122b0374e740736891d782741e071
       body: ""
