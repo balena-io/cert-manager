@@ -4,6 +4,13 @@ set -ea
 
 [[ "${VERBOSE}" =~ on|On|Yes|yes|true|True ]] && set -x
 
+if [[ -n $BALENA_DEVICE_UUID ]]; then
+    # prepend the device UUID if running on balenaOS
+    TLD="${TLD:-${BALENA_DEVICE_UUID}.${DNS_TLD}}"
+else
+    TLD="${TLD:-${DNS_TLD}}"
+fi
+
 AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-https://s3.amazonaws.com}
 AWS_REGION=${AWS_REGION:-us-east-1}
 AWS_DEFAULT_REGION=${AWS_REGION}
@@ -32,21 +39,9 @@ key_algo=${KEY_ALGO:-ecdsa}
 # shellcheck disable=SC2034
 key_size=${KEY_SIZE:-256}
 
-if [[ -n $BALENA_DEVICE_UUID ]]; then
-    # prepend the device UUID if running on balenaOS
-    # shellcheck disable=SC2153
-    TLD="${BALENA_DEVICE_UUID}.${DNS_TLD}"
-else
-    TLD="${DNS_TLD}"
-fi
-
-rm -f "${CERTS}/.ready"
-
 function cleanup() {
    remove_update_lock
-
 }
-
 trap 'cleanup' EXIT
 
 # https://coderwall.com/p/--eiqg/exponential-backoff-in-bash
@@ -617,6 +612,8 @@ function set_update_lock {
 function remove_update_lock() {
     rm -f /tmp/balena/updates.lock
 }
+
+rm -f "${CERTS}/.ready"
 
 mkdir -p "${CERTS}/public" "${CERTS}/private" "$(dirname "${EXPORT_CERT_CHAIN_PATH}")"
 
