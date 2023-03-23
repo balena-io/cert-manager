@@ -17,3 +17,8 @@ jobs:
       balena_slugs: balenablocks/cert-manager-amd64
       # FIXME: remove when Kubernetes clusters are configured to pull from bh.cr
       docker_images: balena/cert-manager
+      required_status_checks: >
+        [
+          "Flowzone / All tests",
+          "Flowzone / All jobs"
+        ]
