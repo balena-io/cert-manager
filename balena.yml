@@ -4,7 +4,7 @@ description: Issues wildcard [ACME](https://letsencrypt.org/) and
   [private](https://github.com/balena-io/ca-private) SSL certificates.
 fleetcta: Go nuts
 post-provisioning: |
-  [![balena](https://github.com/balenablocks/cert-manager/actions/workflows/balena.yml/badge.svg)](https://github.com/balenablocks/cert-manager/actions/workflows/balena.yml)
+  [![balena](https://github.com/balena-io/cert-manager/actions/workflows/balena.yml/badge.svg)](https://github.com/balena-io/cert-manager/actions/workflows/balena.yml)
 
   ## Usage instructions
   > ACME certificates verification uses [dns-01-challenge](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge)
@@ -24,11 +24,11 @@ assets:
   repository:
     type: blob.asset
     data:
-      url: 'https://github.com/balenablocks/cert-manager'
+      url: 'https://github.com/balena-io/cert-manager'
   logo:
     type: blob.asset
     data:
-      url: 'https://raw.githubusercontent.com/balenablocks/cert-manager/master/logo.png'
+      url: 'https://raw.githubusercontent.com/balena-io/cert-manager/master/logo.png'
 data:
   defaultDeviceType: genericx86-64-ext
   supportedDeviceTypes:
@@ -37,4 +37,5 @@ data:
     - intel-nuc
     - qemux86
     - qemux86-64
+    - generic-aarch64
 version: 0.1.15
