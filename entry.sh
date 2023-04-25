@@ -560,6 +560,14 @@ function get_root_ca {
     fi
 }
 
+function assemble_ca_bundle {
+    if ! [[ -e "${CERTS}/ca-bundle.pem" ]] \
+      && [[ -L "${CERTS}/server-ca.pem" ]] \
+      && [[ -L "${CERTS}/root-ca.pem" ]]; then
+        cat "${CERTS}/server-ca.pem" "${CERTS}/root-ca.pem" > "${CERTS}/ca-bundle.pem"
+    fi
+}
+
 function check_pub_cert_expiry() {
     [[ -e $1 ]] || return 1
 
@@ -634,6 +642,7 @@ issue_private_certs "$(resolve_templates /opt/certs.json)"
 issue_private_keys "$(resolve_templates /opt/keys.json)"
 issue_public_certs "${BALENA_DEVICE_UUID}" "${DNS_TLD}" "${TLD}"
 surface_root_certs "${TLD}"
+assemble_ca_bundle
 generate_compute_all "${TLD}"
 assemble_private_cert_chain "${TLD}"
 surface_resolved_cert_chain "${TLD}"
