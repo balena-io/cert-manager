@@ -1,4 +1,15 @@
 - commits:
+    - subject: Update links
+      hash: a5220f2cef1906572cd0dd83cdc42f45eb70fe83
+      body: ""
+      footer:
+        change-type: patch
+      author: Anton Belodedenko
+      nested: []
+  version: 0.1.16
+  title: ""
+  date: 2023-04-25T18:09:57.367Z
+- commits:
     - subject: Move to balena-io
       hash: 6d85e07a59eaaf77251f21a97ab2f871ff0f6a25
       body: |
