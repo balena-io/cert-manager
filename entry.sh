@@ -447,10 +447,12 @@ function surface_resolved_cert_chain {
         if ! [[ -L "${CERTS}/${cert}" ]] \
           || (! [[ "$(readlink -f "${CERTS}/${cert}")" =~ ${CERTS}\/${target}\/ ]]) \
           && [[ -s "${CERTS}/${target}/${cert}" ]]; then
-            rm -f "${CERTS}/${cert}"
-            ln -s "${CERTS}/${target}/${cert}" "${CERTS}/${cert}"
+            ln -sf "${CERTS}/${target}/${cert}" "${CERTS}/${cert}"
         fi
     done
+    
+    ln -sf "${target}/${tld}.pem" "${CERTS}/server.pem"
+    ln -sf "${target}/${tld}.key" "${CERTS}/server.key"
 
     # shellcheck disable=SC2235
     if ! [[ -e "${EXPORT_CERT_CHAIN_PATH}" ]];  then
