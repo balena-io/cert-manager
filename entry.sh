@@ -453,15 +453,14 @@ function surface_resolved_cert_chain {
     done
 
     # shellcheck disable=SC2235
-    if ! [[ -e "${EXPORT_CERT_CHAIN_PATH}" ]];  then
-        if [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
-            if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then
-                rm -f "${EXPORT_CERT_CHAIN_PATH}"
-                ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
-            fi
+    if [[ ! -L "${EXPORT_CERT_CHAIN_PATH}" || $(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]] \
+      && [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
+        if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then
+            rm -f "${EXPORT_CERT_CHAIN_PATH}"
+            ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
         fi
     else
-        echo "certificate at '${EXPORT_CERT_CHAIN_PATH}' is not a link"
+        echo "certificate at '${EXPORT_CERT_CHAIN_PATH}' is a link to ${CERTS}/${target}/${tld}-chain.pem."
     fi
 }
 
@@ -486,8 +485,9 @@ function surface_root_certs {
     [[ -n "${tld}" ]] || return
 
     for cert in ca-bundle server-ca root-ca; do
-        if ! [[ -L "${CERTS}/${cert}.pem" ]] \
+        if [[ ! -L "${CERTS}/${cert}.pem" || $(readlink "${CERTS}/${cert}.pem") != "${CERTS}/private/${cert}.${tld}.pem" ]] \
           && [[ -s "${CERTS}/private/${cert}.${tld}.pem" ]]; then
+            rm -f "${CERTS}/${cert}.pem"
             ln -s "${CERTS}/private/${cert}.${tld}.pem" "${CERTS}/${cert}.pem"
         fi
     done
