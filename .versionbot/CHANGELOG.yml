@@ -1,4 +1,18 @@
 - commits:
+    - subject: Update the links to certificates when DNS_TLD or TLD changes.
+      hash: 07c8efe990e3cd1d4e486e4302567b548f8ba576
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Carlo Miguel F. Cruz <carloc@balena.io>
+        signed-off-by: Carlo Miguel F. Cruz <carloc@balena.io>
+      author: Carlo Miguel F. Cruz
+      nested: []
+  version: 0.1.17
+  title: ""
+  date: 2023-06-27T16:12:19.471Z
+- commits:
     - subject: Update links
       hash: a5220f2cef1906572cd0dd83cdc42f45eb70fe83
       body: ""
