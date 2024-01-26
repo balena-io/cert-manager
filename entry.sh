@@ -41,6 +41,7 @@ key_size=${KEY_SIZE:-256}
 
 function cleanup() {
    remove_update_lock
+   sleep $(( (RANDOM % 5) + 5))s
 }
 trap 'cleanup' EXIT
 
@@ -295,7 +296,7 @@ function issue_public_certs {
         current="$(ls -dt live/${dns_tld}* | head -n1)"
 
         # only attempt to renew if the certificate is near expiry
-        if ! check_pub_cert_expiry "${current}/cert.pem"; then
+        if ! check_cert_expiry "${current}/cert.pem"; then
 			# chain breaks after first success
 			cloudflare_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
 			  || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
@@ -434,6 +435,9 @@ function resolve_cert_target {
     echo "${target}"
 }
 
+# ensure certificate chain at the well-known location is up to date
+# .. don't touch customer supplied certificates managed by HAProxy
+# .. only work on certificates issued by self-signed server CA
 function surface_resolved_cert_chain {
     local tld
     tld="${1}"
@@ -452,8 +456,12 @@ function surface_resolved_cert_chain {
         fi
     done
 
+    cert_issuer="$(get_cert_issuer "${EXPORT_CERT_CHAIN_PATH}" | awk -F'issuer=' '{print $2}')"
+    server_ca="$(get_cert_subject "${CERTS}/server-ca.pem" | awk -F'subject=' '{print $2}')"
+
     # shellcheck disable=SC2235
     if [[ ! -L "${EXPORT_CERT_CHAIN_PATH}" || $(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]] \
+      && [[ "$cert_issuer" =~ "$server_ca" ]] \
       && [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
         if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then
             rm -f "${EXPORT_CERT_CHAIN_PATH}"
@@ -464,13 +472,19 @@ function surface_resolved_cert_chain {
     fi
 }
 
-# (TBC) handle renewals
 function assemble_private_cert_chain {
     local tld
     tld="${1}"
     [[ -n "${tld}" ]] || return
 
-    if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]]; then
+    # file exists and has a size of more than 0 bytes
+    if [[ -s "${CERTS}/private/${tld}-chain.pem" ]]; then
+        check_cert_expiry "${CERTS}/private/${tld}-chain.pem"
+        expiring=$?
+    fi
+
+    # file doesn't exist or empty, or expiring soon
+    if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] || [[ $expiring -gt 0 ]]; then
         cat "${CERTS}/private/${tld}.pem" \
           "${CERTS}/private/server-ca.${tld}.pem" \
           "${CERTS}/private/root-ca.${tld}.pem" \
@@ -568,7 +582,7 @@ function assemble_ca_bundle {
     fi
 }
 
-function check_pub_cert_expiry() {
+function check_cert_expiry() {
     [[ -e $1 ]] || return 1
 
     expiry_check="$(openssl x509 -noout \
@@ -576,16 +590,35 @@ function check_pub_cert_expiry() {
       -in "$1")"
 
     echo "$1 ${expiry_check} in $(( cert_seconds_until_expiry / 60 / 60 / 24 )) days"
+    printf '\t%s\n\t%s\n' "$(get_cert_subject "$1")" "$(get_cert_issuer "$1")"
 
     if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
         return 1
     fi
 }
+export -f check_cert_expiry
+
+function get_cert_issuer() {
+    [[ -e $1 ]] || return 1
+    local cert
+    cert=$1
+
+    cat <${cert} | openssl x509 -noout -issuer
+}
+export -f get_cert_issuer
+
+function get_cert_subject() {
+    [[ -e $1 ]] || return 1
+    local cert
+    cert=$1
+
+    cat <${cert} | openssl x509 -noout -subject
+}
+export -f get_cert_subject
 
 function check_self_signed_certs_expiry() {
-    find "${CERTS}/private" -type f -name '*.pem' \
-      | grep -v dhparam \
-      | xargs -t -I{} openssl x509 -noout -checkend "${cert_seconds_until_expiry}" -in {}
+    find "${CERTS}/private" -type f -name '*.pem' ! -name 'dhparam.*' \
+      -exec /bin/bash -c 'check_cert_expiry "$0"' {} \;
 }
 
 function resolve_templates() {
@@ -653,11 +686,8 @@ touch "${CERTS}/.ready"
 # remove lock
 remove_update_lock
 
-# exit-restart if near expiration (LetEncrypt only)
 while true; do
-    if ! check_pub_cert_expiry "${EXPORT_CERT_CHAIN_PATH}"; then exit; fi
-
+    check_cert_expiry "${EXPORT_CERT_CHAIN_PATH}"
     check_self_signed_certs_expiry
-
     sleep 1d
 done

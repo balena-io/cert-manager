@@ -29,8 +29,3 @@ jobs:
       docker_images: |
         balena/cert-manager,
         ghcr.io/balena-io/cert-manager
-      required_status_checks: >
-        [
-          "Flowzone / All tests",
-          "Flowzone / All jobs"
-        ]
