@@ -1,4 +1,16 @@
 - commits:
+    - subject: implement private certificate renewal
+      hash: 5ddeec8cfe1dc6af5307c36af2e22e5aa5a0267f
+      body: |
+        * don't touch customer provided certs
+      footer:
+        change-type: minor
+      author: Anton Belodedenko
+      nested: []
+  version: 0.2.0
+  title: ""
+  date: 2024-01-26T14:24:55.080Z
+- commits:
     - subject: Update the links to certificates when DNS_TLD or TLD changes.
       hash: 07c8efe990e3cd1d4e486e4302567b548f8ba576
       body: ""
