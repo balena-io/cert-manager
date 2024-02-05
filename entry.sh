@@ -456,19 +456,29 @@ function surface_resolved_cert_chain {
         fi
     done
 
-    cert_issuer="$(get_cert_issuer "${EXPORT_CERT_CHAIN_PATH}" | awk -F'issuer=' '{print $2}')"
-    server_ca="$(get_cert_subject "${CERTS}/server-ca.pem" | awk -F'subject=' '{print $2}')"
-
     # shellcheck disable=SC2235
-    if [[ ! -L "${EXPORT_CERT_CHAIN_PATH}" || $(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]] \
-      && [[ "$cert_issuer" =~ "$server_ca" ]] \
-      && [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
-        if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then
-            rm -f "${EXPORT_CERT_CHAIN_PATH}"
-            ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
+    if [[ -s "$EXPORT_CERT_CHAIN_PATH" ]] && [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
+        cert_issuer="$(get_cert_issuer "${EXPORT_CERT_CHAIN_PATH}" | awk -F'issuer=' '{print $2}')"
+        server_ca="$(get_cert_subject "${CERTS}/server-ca.pem" | awk -F'subject=' '{print $2}')"
+	[[ "$cert_issuer" =~ "$server_ca" ]]
+        not_a_custom_cert=$?
+	
+	[[ ! -L "${EXPORT_CERT_CHAIN_PATH}" || $(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]]
+        not_a_link_or_update_link=$?
+ 
+        if [[ $not_a_link_or_update_link -eq 0 ]] && [[ $not_a_custom_cert -eq 0 ]]; then
+            if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then  # update link only if different
+                rm -f "${EXPORT_CERT_CHAIN_PATH}"
+                ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
+            fi
+        else
+            get_cert_subject "${EXPORT_CERT_CHAIN_PATH}"
         fi
+
+    elif [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then  # no existing chain, create a new link
+        ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
     else
-        echo "certificate at '${EXPORT_CERT_CHAIN_PATH}' is a link to ${CERTS}/${target}/${tld}-chain.pem."
+        echo "${target} chain not found"  # shouldn't end up here (ever)
     fi
 }
 
