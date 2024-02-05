@@ -1,4 +1,15 @@
 - commits:
+    - subject: refactor chain cert surfacing
+      hash: 118c758156e3f8bd6f171bfe0057ce1f0abe5ecd
+      body: ""
+      footer:
+        change-type: patch
+      author: Anton Belodedenko
+      nested: []
+  version: 0.2.1
+  title: ""
+  date: 2024-02-05T16:23:55.485Z
+- commits:
     - subject: implement private certificate renewal
       hash: 5ddeec8cfe1dc6af5307c36af2e22e5aa5a0267f
       body: |
