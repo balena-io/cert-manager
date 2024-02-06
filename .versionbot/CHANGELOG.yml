@@ -1,4 +1,15 @@
 - commits:
+    - subject: correct and refactor logical tests
+      hash: b44d2db11fd3fd4b51786341e74f5d1dc547ae02
+      body: ""
+      footer:
+        change-type: patch
+      author: Anton Belodedenko
+      nested: []
+  version: 0.2.2
+  title: ""
+  date: 2024-02-06T20:28:30.468Z
+- commits:
     - subject: refactor chain cert surfacing
       hash: 118c758156e3f8bd6f171bfe0057ce1f0abe5ecd
       body: ""
