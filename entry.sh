@@ -297,10 +297,10 @@ function issue_public_certs {
 
         # only attempt to renew if the certificate is near expiry
         if ! check_cert_expiry "${current}/cert.pem"; then
-			# chain breaks after first success
-			cloudflare_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
-			  || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
-			  || true
+            # chain breaks after first success
+            cloudflare_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
+              || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
+              || true
         fi
 
         # refresh link to the latest certificate set
@@ -460,13 +460,18 @@ function surface_resolved_cert_chain {
     if [[ -s "$EXPORT_CERT_CHAIN_PATH" ]] && [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
         cert_issuer="$(get_cert_issuer "${EXPORT_CERT_CHAIN_PATH}" | awk -F'issuer=' '{print $2}')"
         server_ca="$(get_cert_subject "${CERTS}/server-ca.pem" | awk -F'subject=' '{print $2}')"
-	[[ "$cert_issuer" =~ "$server_ca" ]]
-        not_a_custom_cert=$?
-	
-	[[ ! -L "${EXPORT_CERT_CHAIN_PATH}" || $(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]]
-        not_a_link_or_update_link=$?
- 
-        if [[ $not_a_link_or_update_link -eq 0 ]] && [[ $not_a_custom_cert -eq 0 ]]; then
+
+        custom_cert=1
+        if [[ "$cert_issuer" =~ "$server_ca" ]]; then
+            custom_cert=0
+        fi
+
+        update_link=0
+        if [[ ! -L "${EXPORT_CERT_CHAIN_PATH}" || $(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]]; then
+            update_link=1
+        fi
+
+        if [[ $update_link -eq 1 ]] && [[ $custom_cert -eq 0 ]]; then
             if ! diff -q "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"; then  # update link only if different
                 rm -f "${EXPORT_CERT_CHAIN_PATH}"
                 ln -s "${CERTS}/${target}/${tld}-chain.pem" "${EXPORT_CERT_CHAIN_PATH}"
