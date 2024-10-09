@@ -32,7 +32,7 @@ RUN set -x ; apk add procmail --no-cache --repository http://dl-cdn.alpinelinux.
 	&& apk add --no-cache --allow-untrusted "$(basename "${!url}")" \
 	&& rm "$(basename "${!url}")"
 
-RUN curl -fsSL "https://raw.githubusercontent.com/balena-io/open-balena/master/scripts/_keyid.js" -o /opt/_keyid.js
+RUN curl -fsSL "https://raw.githubusercontent.com/balena-io/open-balena/v3.8.5/scripts/_keyid.js" -o /opt/_keyid.js
 
 WORKDIR /etc/letsencrypt
 

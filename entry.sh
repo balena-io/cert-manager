@@ -187,6 +187,37 @@ function get_env_var_value {
     echo "${varval}"
 }
 
+function hetzner_issue_public_cert {
+    local balena_device_uuid
+    balena_device_uuid="${1}"
+
+    local dns_tld
+    dns_tld="${2}"
+    [[ -n "${dns_tld}" ]] || return
+
+    hetzner_api_token="$(get_env_var_value "${balena_device_uuid}" HETZNER_API_TOKEN)"
+    [[ -n "${hetzner_api_token}" ]] || return
+
+    mkdir -p ~/.secrets/certbot
+
+    echo "dns_hetzner_api_token = ${hetzner_api_token}" \
+      > ~/.secrets/certbot/hetzner.ini \
+      && chmod 0600 ~/.secrets/certbot/hetzner.ini
+
+    # Install the Hetzner DNS plugin for Certbot
+    pip install certbot-dns-hetzner
+
+    # shellcheck disable=SC2086
+    with_backoff certbot certonly --agree-tos --non-interactive --verbose --expand \
+      --authenticator dns-hetzner \
+      --dns-hetzner-credentials ~/.secrets/certbot/hetzner.ini \
+      --dns-hetzner-propagation-seconds 60 \
+      --cert-name "${dns_tld}" \
+      -m "$(get_acme_email ${balena_device_uuid})" \
+      -d "${dns_tld}" \
+      ${sans}
+}
+
 function cloudflare_issue_public_cert {
     local balena_device_uuid
     balena_device_uuid="${1}"
@@ -300,6 +331,7 @@ function issue_public_certs {
             # chain breaks after first success
             cloudflare_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
               || gandi_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
+              || hetzner_issue_public_cert "${balena_device_uuid}" "${dns_tld}" \
               || true
         fi
 
