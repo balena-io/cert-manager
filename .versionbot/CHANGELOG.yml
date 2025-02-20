@@ -1,4 +1,15 @@
 - commits:
+    - subject: Explicitly set GH_TOKEN permissions
+      hash: 81e1d44f00a59a7eabb6f0075b2ebe2947d24562
+      body: ""
+      footer:
+        change-type: patch
+      author: Anton Belodedenko
+      nested: []
+  version: 0.2.3
+  title: ""
+  date: 2024-11-18T21:21:19.790Z
+- commits:
     - subject: correct and refactor logical tests
       hash: b44d2db11fd3fd4b51786341e74f5d1dc547ae02
       body: ""
