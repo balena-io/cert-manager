@@ -13,31 +13,24 @@ fi
 
 AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-https://s3.amazonaws.com}
 AWS_REGION=${AWS_REGION:-us-east-1}
+# shellcheck disable=SC2034
 AWS_DEFAULT_REGION=${AWS_REGION}
 CERTS=${CERTS:-/certs}
 EXPORT_CERT_CHAIN_PATH=${EXPORT_CERT_CHAIN_PATH:-${CERTS}/export/chain.pem}
 SUBJECT_ALTERNATE_NAMES=${SUBJECT_ALTERNATE_NAMES:-*,*.devices,*.s3,*.img}
 SSH_KEY_NAMES=${SSH_KEY_NAMES:-devices,git,proxy}
-ca_http_url=${CA_HTTP_URL:-http://balena-ca:8888}
-dns_cloudflare_propagation_seconds=${DNS_CLOUDFLARE_PROPAGATION_SECONDS:-60}
-attempts=${ATTEMPTS:-3}
-timeout=${TIMEOUT:-60}
-cert_seconds_until_expiry=${CERT_SECONDS_UNTIL_EXPIRY:-604800} # 7 days
-
-# shellcheck disable=SC2034
-country=${COUNTRY:-US}
-# shellcheck disable=SC2034
-state=${STATE:-Washington}
-# shellcheck disable=SC2034
-locality_name=${LOCALITY_NAME:-Seattle}
-# shellcheck disable=SC2034
-org=${ORG:-balena}
-# shellcheck disable=SC2034
-org_unit=${ORG_UNIT:-balenaCloud}
-# shellcheck disable=SC2034
-key_algo=${KEY_ALGO:-ecdsa}
-# shellcheck disable=SC2034
-key_size=${KEY_SIZE:-256}
+CA_HTTP_URL=${CA_HTTP_URL:-http://balena-ca:8888}
+DNS_CLOUDFLARE_PROPAGATION_SECONDS=${DNS_CLOUDFLARE_PROPAGATION_SECONDS:-60}
+ATTEMPTS=${ATTEMPTS:-3}
+TIMEOUT=${TIMEOUT:-60}
+CERT_SECONDS_UNTIL_EXPIRY=${CERT_SECONDS_UNTIL_EXPIRY:-604800} # 7 days
+COUNTRY=${COUNTRY:-US}
+STATE=${STATE:-Washington}
+LOCALITY_NAME=${LOCALITY_NAME:-Seattle}
+ORG=${ORG:-balena}
+ORG_UNIT=${ORG_UNIT:-balenaCloud}
+KEY_ALGO=${KEY_ALGO:-ecdsa}
+KEY_SIZE=${KEY_SIZE:-256}
 
 function cleanup() {
    remove_update_lock
@@ -45,16 +38,28 @@ function cleanup() {
 }
 trap 'cleanup' EXIT
 
+curl_with_opts() {
+  curl --silent --retry "${ATTEMPTS}" --fail "$@"
+}
+
+curl_with_auth_opts() {
+  if [[ -n "${AUTH_TOKEN:-}" ]]; then
+      curl --silent --retry "${ATTEMPTS}" --fail -H "Authorization: Bearer ${AUTH_TOKEN}" "$@"
+  else
+      curl --silent --retry "${ATTEMPTS}" --fail "$@"
+  fi
+}
+
 # https://coderwall.com/p/--eiqg/exponential-backoff-in-bash
 # https://letsencrypt.org/docs/integration-guide/#retrying-failures
 function with_backoff() {
-    local max_attempts=${attempts-5}
-    local timeout=${timeout-1}
+    local max_attempts=${ATTEMPTS-5}
+    local timeout=${TIMEOUT-1}
     local attempt=0
     local exitCode=0
 
     set +e
-    while [[ $attempt < $max_attempts ]]
+    while [[ $attempt -lt $max_attempts ]]
     do
         "$@"
         exitCode=$?
@@ -96,7 +101,7 @@ function compute_api_kid {
         # https://github.com/balena-io/open-balena/blob/master/scripts/gen-token-auth-cert
         node --no-deprecation /opt/_keyid.js \
           "${CERTS}/private/api.${tld}.der" \
-          > "${CERTS}/private/api.${tld}.kid"
+          >"${CERTS}/private/api.${tld}.kid"
     fi
 }
 
@@ -128,13 +133,13 @@ function generate_ssh_keys {
                 ssh-keygen -f "${key}" -t "${algo}" -N "" -m PEM \
                   && chmod 0600 "${key}"
             fi
-            ssh-keygen -y -f "${key}" > "${key}.pub"
+            ssh-keygen -y -f "${key}" >"${key}.pub"
         done
     fi
 
     find "${CERTS}/private" \
       -name "${cn}.${tld}.*.key.pub" \
-      -exec cat {} \; > "${CERTS}/private/${cn}.${tld}.authorized_keys"
+      -exec cat {} \; >"${CERTS}/private/${cn}.${tld}.authorized_keys"
 }
 
 function get_acme_email {
@@ -147,7 +152,7 @@ function get_acme_email {
             [[ -n "${balena_device_uuid}" ]] || return
 
             # shellcheck disable=SC2153
-            acme_email="$(curl --retry "${attempts}" --fail "${BALENA_API_URL}/user/v1/whoami" \
+            acme_email="$(curl_with_opts "${BALENA_API_URL}/user/v1/whoami" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer $(get_env_var_value "${balena_device_uuid}" API_TOKEN)" \
               --compressed | jq -r '.email')"
@@ -170,13 +175,13 @@ function get_env_var_value {
             balena_device_uuid="${1}"
             [[ -n "${balena_device_uuid}" ]] || return
 
-            balena_device_id="$(curl --retry "${attempts}" --fail \
+            balena_device_id="$(curl_with_opts \
               "${BALENA_API_URL}/v6/device?\$filter=uuid%20eq%20'${balena_device_uuid}'" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${BALENA_API_KEY}" \
               --compressed | jq -r .d[].id)"
 
-            varval="$(curl --retry "${attempts}" --fail \
+            varval="$(curl_with_opts \
               "${BALENA_API_URL}/v6/device_service_environment_variable?\$filter=service_install/device%20eq%20${balena_device_id}" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${BALENA_API_KEY}" \
@@ -201,13 +206,13 @@ function cloudflare_issue_public_cert {
     mkdir -p ~/.secrets/certbot
 
     echo "dns_cloudflare_api_token = ${cloudflare_api_token}" \
-      > ~/.secrets/certbot/cloudflare.ini \
+      >~/.secrets/certbot/cloudflare.ini \
       && chmod 0600 ~/.secrets/certbot/cloudflare.ini
 
     # shellcheck disable=SC2086
     with_backoff certbot certonly --agree-tos --non-interactive --verbose --expand \
       --dns-cloudflare \
-      --dns-cloudflare-propagation-seconds "${dns_cloudflare_propagation_seconds}" \
+      --dns-cloudflare-propagation-seconds "${DNS_CLOUDFLARE_PROPAGATION_SECONDS}" \
       --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
       --cert-name "${dns_tld}" \
       -m "$(get_acme_email ${balena_device_uuid})" \
@@ -229,7 +234,7 @@ function gandi_issue_public_cert {
     mkdir -p ~/.secrets/certbot
 
     echo "dns_gandi_api_key = ${gandi_api_token}" \
-      > ~/.secrets/certbot/gandi.ini \
+      >~/.secrets/certbot/gandi.ini \
       && chmod 0600 ~/.secrets/certbot/gandi.ini
 
     # https://github.com/obynio/certbot-plugin-gandi
@@ -258,7 +263,7 @@ function backup_certs_to_s3 {
     dns_tld="${1}"
 
     if [[ -n $AWS_S3_BUCKET ]]; then
-        tar -cpvzf "/tmp/${dns_tld}.tgz" --exclude='accounts' --exclude='renewal-hooks' *
+        tar -cpvzf "/tmp/${dns_tld}.tgz" --exclude='accounts' --exclude='renewal-hooks' ./*
         (s3_init && mcli cp --recursive "/tmp/${dns_tld}.tgz" "s3/${AWS_S3_BUCKET}/") || true
         rm -f "/tmp/${dns_tld}.tgz"
     fi
@@ -293,6 +298,8 @@ function issue_public_certs {
     if ! [[ $dns_tld =~ ^.*\.local\.? ]]; then
         restore_certs_from_s3 "${dns_tld}"
 
+        # shellcheck disable=SC2012
+        # shellcheck disable=SC2086
         current="$(ls -dt live/${dns_tld}* | head -n1)"
 
         # only attempt to renew if the certificate is near expiry
@@ -322,24 +329,24 @@ function issue_public_certs {
             # only update if renewed
             if ! diff "live/latest/fullchain.pem" \
               "${CERTS}/public/${tld}.pem"; then
-                cat < "live/latest/fullchain.pem" > "${CERTS}/public/${tld}.pem"
+                cat <"live/latest/fullchain.pem" >"${CERTS}/public/${tld}.pem"
             fi
 
             if ! diff "live/latest/privkey.pem" \
               "${CERTS}/public/${tld}.key"; then
-                cat < "live/latest/privkey.pem" > "${CERTS}/public/${tld}.key"
+                cat <"live/latest/privkey.pem" >"${CERTS}/public/${tld}.key"
             fi
 
             tmpchain="$(mktemp)"
 
             if ! diff "live/latest/fullchain.pem" \
               "live/latest/privkey.pem"; then
-                cat "live/latest/fullchain.pem" "live/latest/privkey.pem" > "${tmpchain}"
+                cat "live/latest/fullchain.pem" "live/latest/privkey.pem" >"${tmpchain}"
             fi
 
             if ! diff "${tmpchain}" "${CERTS}/public/${tld}-chain.pem"; then
                 cat "live/latest/fullchain.pem" "live/latest/privkey.pem" \
-                  > "${CERTS}/public/${tld}-chain.pem"
+                  >"${CERTS}/public/${tld}-chain.pem"
             fi
 
             rm -f "${tmpchain}"
@@ -358,18 +365,14 @@ function issue_private_certs {
             echo "${request}" | base64 -d | jq -r "${1}"
         }
         tmprequest="$(mktemp)"
-        _jq '.' > "${tmprequest}"
+        _jq '.' >"${tmprequest}"
         common_name="$(_jq '.request.CN')"
 
         if ! [[ -s "${CERTS}/private/${common_name}.pem" ]]; then
             cat < "${tmprequest}" | jq -r
-
-            response="$(curl --retry "${attempts}" --fail \
-              "${ca_http_url}/api/v1/cfssl/newcert" \
-              --data @"${tmprequest}")"
-
-            echo "${response}" | jq -r '.result.certificate' > "${CERTS}/private/${common_name}.pem"
-            echo "${response}" | jq -r '.result.private_key' > "${CERTS}/private/${common_name}.key"
+            response="$(curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/newcert" --data @"${tmprequest}")"
+            echo "${response}" | jq -r '.result.certificate' >"${CERTS}/private/${common_name}.pem"
+            echo "${response}" | jq -r '.result.private_key' >"${CERTS}/private/${common_name}.key"
             chmod 0600 "${CERTS}/private/${common_name}.key"
         fi
         rm -f "${tmprequest}"
@@ -386,17 +389,13 @@ function issue_private_keys {
             echo "${request}" | base64 -d | jq -r "${1}"
         }
         tmprequest="$(mktemp)"
-        _jq '.' > "${tmprequest}"
+        _jq '.' >"${tmprequest}"
         common_name="$(_jq '.CN')"
 
         if ! [[ -s "${CERTS}/private/${common_name}.key" ]]; then
             cat < "${tmprequest}" | jq -r
-
-            response="$(curl --retry "${attempts}" --fail \
-              "${ca_http_url}/api/v1/cfssl/newkey" \
-              --data @"${tmprequest}")"
-
-            echo "${response}" | jq -r '.result.private_key' > "${CERTS}/private/${common_name}.key"
+            response="$(curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/newkey" --data @"${tmprequest}")"
+            echo "${response}" | jq -r '.result.private_key' >"${CERTS}/private/${common_name}.key"
             chmod 0600 "${CERTS}/private/${common_name}.key"
         fi
         rm -f "${tmprequest}"
@@ -462,7 +461,7 @@ function surface_resolved_cert_chain {
         server_ca="$(get_cert_subject "${CERTS}/server-ca.pem" | awk -F'subject=' '{print $2}')"
 
         custom_cert=1
-        if [[ "$cert_issuer" =~ "$server_ca" ]]; then
+        if [[ "$cert_issuer" =~ $server_ca ]]; then
             custom_cert=0
         fi
 
@@ -504,7 +503,7 @@ function assemble_private_cert_chain {
           "${CERTS}/private/server-ca.${tld}.pem" \
           "${CERTS}/private/root-ca.${tld}.pem" \
           "${CERTS}/private/${tld}.key" \
-          > "${CERTS}/private/${tld}-chain.pem"
+          >"${CERTS}/private/${tld}-chain.pem"
     fi
 }
 
@@ -570,9 +569,9 @@ function get_server_ca {
 
     # shellcheck disable=SC2153
     if ! [[ -s "${CERTS}/private/server-ca.${tld}.pem" ]]; then
-        curl --retry "${attempts}" --fail "${ca_http_url}/api/v1/cfssl/info" \
+        curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/info" \
           --data '{"label": "primary"}' \
-          | jq -r '.result.certificate' > "${CERTS}/private/server-ca.${tld}.pem"
+          | jq -r '.result.certificate' >"${CERTS}/private/server-ca.${tld}.pem"
     fi
 }
 
@@ -583,9 +582,9 @@ function get_root_ca {
 
     # shellcheck disable=SC2153
     if ! [[ -s "${CERTS}/private/root-ca.${tld}.pem" ]]; then
-        curl --retry "${attempts}" --fail "${ca_http_url}/api/v1/cfssl/bundle" \
+        curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/bundle" \
           --data "{\"certificate\": \"$(cat < "${CERTS}/private/server-ca.${tld}.pem" | awk '{printf "%s\\n", $0}')\"}" \
-          | jq -r '.result.root' > "${CERTS}/private/root-ca.${tld}.pem"
+          | jq -r '.result.root' >"${CERTS}/private/root-ca.${tld}.pem"
     fi
 }
 
@@ -593,7 +592,7 @@ function assemble_ca_bundle {
     if ! [[ -e "${CERTS}/ca-bundle.pem" ]] \
       && [[ -L "${CERTS}/server-ca.pem" ]] \
       && [[ -L "${CERTS}/root-ca.pem" ]]; then
-        cat "${CERTS}/server-ca.pem" "${CERTS}/root-ca.pem" > "${CERTS}/ca-bundle.pem"
+        cat "${CERTS}/server-ca.pem" "${CERTS}/root-ca.pem" >"${CERTS}/ca-bundle.pem"
     fi
 }
 
@@ -601,10 +600,10 @@ function check_cert_expiry() {
     [[ -e $1 ]] || return 1
 
     expiry_check="$(openssl x509 -noout \
-      -checkend "${cert_seconds_until_expiry}" \
+      -checkend "${CERT_SECONDS_UNTIL_EXPIRY}" \
       -in "$1")"
 
-    echo "$1 ${expiry_check} in $(( cert_seconds_until_expiry / 60 / 60 / 24 )) days"
+    echo "$1 ${expiry_check} in $(( CERT_SECONDS_UNTIL_EXPIRY / 60 / 60 / 24 )) days"
     printf '\t%s\n\t%s\n' "$(get_cert_subject "$1")" "$(get_cert_issuer "$1")"
 
     if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
@@ -618,7 +617,7 @@ function get_cert_issuer() {
     local cert
     cert=$1
 
-    cat <${cert} | openssl x509 -noout -issuer
+    cat <"${cert}" | openssl x509 -noout -issuer
 }
 export -f get_cert_issuer
 
@@ -627,10 +626,11 @@ function get_cert_subject() {
     local cert
     cert=$1
 
-    cat <${cert} | openssl x509 -noout -subject
+    cat <"${cert}" | openssl x509 -noout -subject
 }
 export -f get_cert_subject
 
+# shellcheck disable=SC2016
 function check_self_signed_certs_expiry() {
     find "${CERTS}/private" -type f -name '*.pem' ! -name 'dhparam.*' \
       -exec /bin/bash -c 'check_cert_expiry "$0"' {} \;
@@ -639,21 +639,20 @@ function check_self_signed_certs_expiry() {
 function resolve_templates() {
     tmptmpl="$(mktemp)"
     if [[ -s $1 ]]; then
-        cat < "$1" | envsubst > "${tmptmpl}"
+        cat < "$1" | envsubst >"${tmptmpl}"
     else
-        echo '[]' > "${tmptmpl}"
+        echo '[]' >"${tmptmpl}"
     fi
     echo "${tmptmpl}"
 }
 
 function set_update_lock {
     if [[ -n $BALENA_SUPERVISOR_ADDRESS ]] && [[ -n $BALENA_SUPERVISOR_API_KEY ]]; then
-        while [[ $(curl --silent --retry "${attempts}" --fail \
+        while [[ $(curl_with_opts \
           "${BALENA_SUPERVISOR_ADDRESS}/v1/device?apikey=${BALENA_SUPERVISOR_API_KEY}" \
           -H "Content-Type: application/json" | jq -r '.update_pending') == 'true' ]]; do
 
-            curl --silent --retry "${attempts}" --fail \
-              "${BALENA_SUPERVISOR_ADDRESS}/v1/device?apikey=${BALENA_SUPERVISOR_API_KEY}" \
+            curl_with_opts "${BALENA_SUPERVISOR_ADDRESS}/v1/device?apikey=${BALENA_SUPERVISOR_API_KEY}" \
               -H "Content-Type: application/json" | jq -r
 
             sleep "$(( (RANDOM % 1) + 1 ))s"
@@ -673,7 +672,7 @@ rm -f "${CERTS}/.ready"
 
 mkdir -p "${CERTS}/public" "${CERTS}/private" "$(dirname "${EXPORT_CERT_CHAIN_PATH}")"
 
-while ! curl -I --fail "${ca_http_url}"; do sleep "$((RANDOM%10+1))s"; done
+while ! curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/health"; do sleep "$((RANDOM%10+1))s"; done
 
 get_server_ca "${TLD}"
 get_root_ca "${TLD}"
