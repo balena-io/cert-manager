@@ -44,9 +44,9 @@ curl_with_opts() {
 
 curl_with_auth_opts() {
   if [[ -n "${AUTH_TOKEN:-}" ]]; then
-      curl --silent --retry "${ATTEMPTS}" --fail -H "Authorization: Bearer ${AUTH_TOKEN}" "$@"
+      curl_with_opts -H "Authorization: Bearer ${AUTH_TOKEN}" "$@"
   else
-      curl --silent --retry "${ATTEMPTS}" --fail "$@"
+      curl_with_opts "$@"
   fi
 }
 
