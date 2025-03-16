@@ -24,13 +24,16 @@ DNS_CLOUDFLARE_PROPAGATION_SECONDS=${DNS_CLOUDFLARE_PROPAGATION_SECONDS:-60}
 ATTEMPTS=${ATTEMPTS:-3}
 TIMEOUT=${TIMEOUT:-60}
 CERT_SECONDS_UNTIL_EXPIRY=${CERT_SECONDS_UNTIL_EXPIRY:-604800} # 7 days
-COUNTRY=${COUNTRY:-US}
-STATE=${STATE:-Washington}
-LOCALITY_NAME=${LOCALITY_NAME:-Seattle}
-ORG=${ORG:-balena}
-ORG_UNIT=${ORG_UNIT:-balenaCloud}
-KEY_ALGO=${KEY_ALGO:-ecdsa}
-KEY_SIZE=${KEY_SIZE:-256}
+
+# these must stay lowercase as they are substituted into config(s)
+country=${country:-US}
+state=${state:-Washington}
+locality_name=${locality_name:-Seattle}
+org=${org:-balena}
+org_unit=${org_unit:-balenaCloud}
+key_algo=${key_algo:-ecdsa}
+key_size=${key_size:-256}
+
 
 function cleanup() {
    remove_update_lock
