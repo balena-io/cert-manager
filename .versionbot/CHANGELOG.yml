@@ -1,4 +1,14 @@
 - commits:
+    - subject: "patch: Correct template env vars"
+      hash: 61850683e1c45f8309a40ad9c3bebec94f3a9516
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.3.1
+  title: ""
+  date: 2025-03-16T19:17:31.360Z
+- commits:
     - subject: Add CA auth. header in AUTH_TOKEN is set
       hash: c7820327926c0835d231fab463f73ade18265348
       body: |
