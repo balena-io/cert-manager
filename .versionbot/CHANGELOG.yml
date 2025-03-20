@@ -1,4 +1,14 @@
 - commits:
+    - subject: "patch: Handle AWS/SSO auth. flow"
+      hash: cea4cb1b60620e0c2ab332a065c5d7d347f8f15b
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.3.2
+  title: ""
+  date: 2025-03-20T18:02:54.780Z
+- commits:
     - subject: "patch: Correct template env vars"
       hash: 61850683e1c45f8309a40ad9c3bebec94f3a9516
       body: ""
