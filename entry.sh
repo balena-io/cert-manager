@@ -254,8 +254,13 @@ function gandi_issue_public_cert {
 }
 
 function s3_init() {
-    if [[ -n $AWS_ACCESS_KEY_ID ]] && [[ -n $AWS_SECRET_ACCESS_KEY ]]; then
+    # only if using static credentials
+    if [[ -n $AWS_ACCESS_KEY_ID ]] && [[ -n $AWS_SECRET_ACCESS_KEY ]] && [[ -z $AWS_SESSION_TOKEN ]]; then
         mcli alias set s3 "${AWS_S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
+    # of course mc handles temporary SSO credentials flow differently
+    elif [[ -n $AWS_ACCESS_KEY_ID ]] && [[ -n $AWS_SECRET_ACCESS_KEY ]] && [[ -n $AWS_SESSION_TOKEN ]]; then
+        # shellcheck disable=SC2034
+        MC_HOST_s3="https://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}:${AWS_SESSION_TOKEN}@${AWS_S3_ENDPOINT//https:\/\/}"
     else
         false
     fi
