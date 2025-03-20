@@ -254,8 +254,16 @@ function gandi_issue_public_cert {
 }
 
 function s3_init() {
+    # only if using static credentials
     if [[ -n $AWS_ACCESS_KEY_ID ]] && [[ -n $AWS_SECRET_ACCESS_KEY ]]; then
-        mcli alias set s3 "${AWS_S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
+        if [[ -z $AWS_SESSION_TOKEN ]]; then
+            mcli alias set s3 "${AWS_S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
+        # of course mc handles temporary SSO credentials flow differently
+        # https://github.com/minio/mc/issues/3533
+        else
+            # shellcheck disable=SC2034
+            MC_HOST_s3="https://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}:${AWS_SESSION_TOKEN}@${AWS_S3_ENDPOINT//https:\/\/}"
+        fi
     else
         false
     fi
