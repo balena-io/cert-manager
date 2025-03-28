@@ -1,4 +1,18 @@
 - commits:
+    - subject: Request for new private cert if existing is expiring.
+      hash: 63a353606da4617c5e52ebd5b2296757bb9c5a31
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Carlo Miguel F. Cruz <carloc@balena.io>
+        signed-off-by: Carlo Miguel F. Cruz <carloc@balena.io>
+      author: Carlo Miguel F. Cruz
+      nested: []
+  version: 0.3.3
+  title: ""
+  date: 2025-03-28T22:04:34.896Z
+- commits:
     - subject: "patch: Handle AWS/SSO auth. flow"
       hash: cea4cb1b60620e0c2ab332a065c5d7d347f8f15b
       body: ""
