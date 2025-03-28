@@ -379,7 +379,7 @@ function issue_private_certs {
         _jq '.' >"${tmprequest}"
         common_name="$(_jq '.request.CN')"
 
-        if ! [[ -s "${CERTS}/private/${common_name}.pem" ]]; then
+        if ! [[ -s "${CERTS}/private/${common_name}.pem" ]] || ! check_cert_expiry "${CERTS}/private/${common_name}.pem"; then
             cat < "${tmprequest}" | jq -r
             response="$(curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/newcert" --data @"${tmprequest}")"
             echo "${response}" | jq -r '.result.certificate' >"${CERTS}/private/${common_name}.pem"
