@@ -287,7 +287,7 @@ function restore_certs_from_s3 {
     if [[ -n $AWS_S3_BUCKET ]]; then
         (s3_init && mcli cp --recursive "s3/${AWS_S3_BUCKET}/${dns_tld}.tgz" /tmp) || true
 
-        if [[ -e /tmp/$dns_tld.tgz ]]; then
+        if [[ -s /tmp/$dns_tld.tgz ]]; then
             tar -xvf "/tmp/${dns_tld}.tgz"
             rm -f "/tmp/${dns_tld}.tgz"
         fi
@@ -502,15 +502,9 @@ function assemble_private_cert_chain {
     tld="${1}"
     [[ -n "${tld}" ]] || return
 
-    # file exists and has a size of more than 0 bytes
-    if [[ -s "${CERTS}/private/${tld}-chain.pem" ]]; then
-        check_cert_expiry "${CERTS}/private/${tld}-chain.pem"
-        expiring=$?
-    fi
-
     # file doesn't exist or empty, or expiring soon
-    if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] || [[ $expiring -gt 0 ]]; then
-        cat "${CERTS}/private/${tld}.pem" \
+    if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] || ! check_cert_expiry "${CERTS}/private/${tld}-chain.pem"; then
+        cat <"${CERTS}/private/${tld}.pem" \
           "${CERTS}/private/server-ca.${tld}.pem" \
           "${CERTS}/private/root-ca.${tld}.pem" \
           "${CERTS}/private/${tld}.key" \
@@ -600,7 +594,7 @@ function get_root_ca {
 }
 
 function assemble_ca_bundle {
-    if ! [[ -e "${CERTS}/ca-bundle.pem" ]] \
+    if ! [[ -s "${CERTS}/ca-bundle.pem" ]] \
       && [[ -L "${CERTS}/server-ca.pem" ]] \
       && [[ -L "${CERTS}/root-ca.pem" ]]; then
         cat "${CERTS}/server-ca.pem" "${CERTS}/root-ca.pem" >"${CERTS}/ca-bundle.pem"
@@ -608,7 +602,7 @@ function assemble_ca_bundle {
 }
 
 function check_cert_expiry() {
-    [[ -e $1 ]] || return 1
+    [[ -s $1 ]] || return 1
 
     expiry_check="$(openssl x509 -noout \
       -checkend "${CERT_SECONDS_UNTIL_EXPIRY}" \
@@ -624,7 +618,7 @@ function check_cert_expiry() {
 export -f check_cert_expiry
 
 function get_cert_issuer() {
-    [[ -e $1 ]] || return 1
+    [[ -s $1 ]] || return 1
     local cert
     cert=$1
 
@@ -633,7 +627,7 @@ function get_cert_issuer() {
 export -f get_cert_issuer
 
 function get_cert_subject() {
-    [[ -e $1 ]] || return 1
+    [[ -s $1 ]] || return 1
     local cert
     cert=$1
 
