@@ -38,4 +38,4 @@ data:
     - qemux86
     - qemux86-64
     - generic-aarch64
-version: 0.3.3
+version: 0.3.4

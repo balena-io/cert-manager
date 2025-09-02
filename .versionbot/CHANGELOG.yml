@@ -1,4 +1,14 @@
 - commits:
+    - subject: "patch: Fix private cert renewal"
+      hash: 84ca157ba2bcce91ba9a67cde7e17143842cd58f
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.3.4
+  title: ""
+  date: 2025-09-02T16:27:07.307Z
+- commits:
     - subject: Request for new private cert if existing is expiring.
       hash: 63a353606da4617c5e52ebd5b2296757bb9c5a31
       body: ""
