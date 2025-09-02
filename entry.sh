@@ -477,7 +477,8 @@ function surface_resolved_cert_chain {
         fi
 
         update_link=0
-        if [[ ! -L "${EXPORT_CERT_CHAIN_PATH}" || $(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]]; then
+        if [[ ! -L "${EXPORT_CERT_CHAIN_PATH}" \
+          || $(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]]; then
             update_link=1
         fi
 
@@ -503,7 +504,11 @@ function assemble_private_cert_chain {
     [[ -n "${tld}" ]] || return
 
     # file doesn't exist or empty, or expiring soon
-    if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] || ! check_cert_expiry "${CERTS}/private/${tld}-chain.pem"; then
+    if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] \
+      || ! check_cert_expiry "${CERTS}/private/${tld}-chain.pem"; then
+        # these may not exist if CN != {{DNS_TLD}} or there are not certs in the request
+        touch "${CERTS}/private/${tld}.pem" "${CERTS}/private/${tld}.key"
+
         cat <"${CERTS}/private/${tld}.pem" \
           "${CERTS}/private/server-ca.${tld}.pem" \
           "${CERTS}/private/root-ca.${tld}.pem" \
@@ -518,7 +523,8 @@ function surface_root_certs {
     [[ -n "${tld}" ]] || return
 
     for cert in ca-bundle server-ca root-ca; do
-        if [[ ! -L "${CERTS}/${cert}.pem" || $(readlink "${CERTS}/${cert}.pem") != "${CERTS}/private/${cert}.${tld}.pem" ]] \
+        if [[ ! -L "${CERTS}/${cert}.pem" \
+          || $(readlink "${CERTS}/${cert}.pem") != "${CERTS}/private/${cert}.${tld}.pem" ]] \
           && [[ -s "${CERTS}/private/${cert}.${tld}.pem" ]]; then
             rm -f "${CERTS}/${cert}.pem"
             ln -s "${CERTS}/private/${cert}.${tld}.pem" "${CERTS}/${cert}.pem"
