@@ -506,7 +506,7 @@ function assemble_private_cert_chain {
     # file doesn't exist or empty, or expiring soon
     if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] \
       || ! check_cert_expiry "${CERTS}/private/${tld}-chain.pem"; then
-        # these may not exist if CN != {{DNS_TLD}} or there are not certs in the request
+        # these may not exist if CN != {{DNS_TLD}} or there are no certs in the request
         touch "${CERTS}/private/${tld}.pem" "${CERTS}/private/${tld}.key"
 
         cat <"${CERTS}/private/${tld}.pem" \
