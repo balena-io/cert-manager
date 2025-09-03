@@ -1,4 +1,14 @@
 - commits:
+    - subject: "patch: Don't choke if the certs aren't there"
+      hash: 4306ff1c50936f9eb6f9cccdcefd5d4443f2e05f
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.3.5
+  title: ""
+  date: 2025-09-03T07:02:53.795Z
+- commits:
     - subject: "patch: Fix private cert renewal"
       hash: 84ca157ba2bcce91ba9a67cde7e17143842cd58f
       body: ""
