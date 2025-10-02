@@ -499,22 +499,24 @@ function surface_resolved_cert_chain {
 }
 
 function assemble_private_cert_chain {
-    local tld
-    tld="${1}"
-    [[ -n "${tld}" ]] || return
+	local tld
+	tld="${1}"
+	[[ -n "${tld}" ]] || return
 
-    # file doesn't exist or empty, or expiring soon
-    if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] \
-      || ! check_cert_expiry "${CERTS}/private/${tld}-chain.pem"; then
-        # these may not exist if CN != {{DNS_TLD}} or there are no certs in the request
-        touch "${CERTS}/private/${tld}.pem" "${CERTS}/private/${tld}.key"
-
-        cat <"${CERTS}/private/${tld}.pem" \
-          "${CERTS}/private/server-ca.${tld}.pem" \
-          "${CERTS}/private/root-ca.${tld}.pem" \
-          "${CERTS}/private/${tld}.key" \
-          >"${CERTS}/private/${tld}-chain.pem"
-    fi
+	# file doesn't exist or empty, or expiring soon
+	if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] ||
+		! check_cert_expiry "${CERTS}/private/${tld}-chain.pem"; then
+		# these may not exist if CN != {{DNS_TLD}} or there are no certs in the request
+		if [[ -s "${CERTS}/private/${tld}.pem" ]] &&
+			[[ -s "${CERTS}/private/${tld}.key" ]] &&
+			[[ -s "${CERTS}/ca-bundle.pem" ]]; then
+			cat "${CERTS}/private/${tld}.pem" \
+				"${CERTS}/private/${tld}.key" \
+				"${CERTS}/ca-bundle.pem" >"${CERTS}/private/${tld}-chain.pem"
+		else
+			echo 'missing required PKI assets to build HAProxy SSL certificate chain'
+		fi
+	fi
 }
 
 function surface_root_certs {
