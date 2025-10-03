@@ -1,4 +1,14 @@
 - commits:
+    - subject: "patch: Correct HAProxy SSL chain logic"
+      hash: 8099cd667ea919dd673813716caee2f6189e82fe
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.3.6
+  title: ""
+  date: 2025-10-03T00:04:33.602Z
+- commits:
     - subject: "patch: Don't choke if the certs aren't there"
       hash: 4306ff1c50936f9eb6f9cccdcefd5d4443f2e05f
       body: ""
