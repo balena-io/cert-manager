@@ -102,6 +102,13 @@ function compute_api_kid {
 			"${CERTS}/private/api.${tld}.der" \
 			>"${CERTS}/private/api.${tld}.kid"
 	fi
+
+	if [[ -s "${CERTS}/private/api.${tld}.pem" && -s "${CERTS}/private/api.${tld}.kid" ]]; then
+		node --no-deprecation /opt/_jwks.js \
+			"${CERTS}/private/api.${tld}.pem" \
+			"${CERTS}/private/api.${tld}.kid" \
+			>"${CERTS}/private/api.${tld}.jwks.json"
+	fi
 }
 
 function generate_vpn_dhparams {
