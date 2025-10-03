@@ -15,7 +15,7 @@ WORKDIR /etc/letsencrypt
 
 COPY entry.sh /usr/local/bin/
 
-COPY _keyid.js *.json /opt/
+COPY _jwks.js _keyid.js *.json /opt/
 
 ENTRYPOINT ["/bin/bash"]
 
