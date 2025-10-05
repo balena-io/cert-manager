@@ -669,7 +669,7 @@ function set_update_lock {
 		sleep "$(((RANDOM % 5) + 5))s"
 
 		# https://www.balena.io/docs/learn/deploy/release-strategy/update-locking/
-		lockfile /tmp/balena/updates.lock
+		lockfile-create /tmp/balena/updates
 	fi
 }
 
