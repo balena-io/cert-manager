@@ -1,11 +1,4 @@
-# https://hub.docker.com/r/certbot/certbot
-# https://hub.docker.com/r/certbot/dns-cloudflare
-ARG BALENA_ARCH=%%BALENA_ARCH%%
-FROM certbot/dns-cloudflare:amd64-v1.30.0 AS certbot-amd64
-FROM certbot/dns-cloudflare:arm64v8-v1.30.0 AS certbot-arm64
-FROM certbot/dns-cloudflare:arm64v8-v1.30.0 AS certbot-aarch64
-
-FROM certbot-${TARGETARCH:-$BALENA_ARCH}
+FROM certbot/dns-cloudflare:v1.30.0
 
 # hadolint ignore=DL3018
 RUN apk add --no-cache \
