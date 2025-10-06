@@ -1,4 +1,24 @@
 - commits:
+    - subject: Update certbot/dns-cloudflare to v5
+      hash: 96628c8f69ed6d0efdf6daf946c1c10f38435e24
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: joshbwlng
+      nested: []
+    - subject: Stop using Dockerfile.template
+      hash: da9929672b1e25d0f2ffe85ccd3349b28b40891b
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: joshbwlng
+      nested: []
+  version: 0.3.7
+  title: ""
+  date: 2025-10-06T16:38:05.985Z
+- commits:
     - subject: "patch: Correct HAProxy SSL chain logic"
       hash: 8099cd667ea919dd673813716caee2f6189e82fe
       body: ""
