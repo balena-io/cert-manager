@@ -1,4 +1,19 @@
 - commits:
+    - subject: "patch: Don't chock if cert. chain is missing"
+      hash: 60b0c1e2b1f2ec7b19e70818775fd79bc36160c6
+      body: >-
+        > this condition is valid where a default cert. isn't issued (.CN ==
+        {{tld}}` (e.g. `api.{{tld}}` but not `{{tld}}`)
+
+
+        https://balena.fibery.io/Work/Project/Anton-works-1422
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.3.8
+  title: ""
+  date: 2025-10-06T23:33:19.331Z
+- commits:
     - subject: Update certbot/dns-cloudflare to v5
       hash: 96628c8f69ed6d0efdf6daf946c1c10f38435e24
       body: ""
