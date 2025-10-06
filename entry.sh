@@ -710,7 +710,7 @@ touch "${CERTS}/.ready"
 remove_update_lock
 
 while true; do
-	check_cert_expiry "${EXPORT_CERT_CHAIN_PATH}"
-	check_self_signed_certs_expiry
+	[[ -s "$EXPORT_CERT_CHAIN_PATH" ]] && check_cert_expiry "${EXPORT_CERT_CHAIN_PATH}"  # cert. chain may not exist (by design)
+	check_self_signed_certs_expiry  # .. but at least some self-signed certs. should
 	sleep 1d
 done
