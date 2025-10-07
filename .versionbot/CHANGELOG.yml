@@ -1,4 +1,16 @@
 - commits:
+    - subject: Generate JWKS file
+      hash: eb9e37f1c26e10da9fef7ee42470ebeb19033b71
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: joshbwlng
+      nested: []
+  version: 0.4.0
+  title: ""
+  date: 2025-10-07T02:03:41.918Z
+- commits:
     - subject: "patch: Don't chock if cert. chain is missing"
       hash: 60b0c1e2b1f2ec7b19e70818775fd79bc36160c6
       body: >-
