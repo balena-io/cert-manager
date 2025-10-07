@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update certbot/dns-cloudflare Docker tag to v5.1.0
+      hash: a9faea3f89f44038f340bf3d377bd0b090c311b7
+      body: |
+        Update certbot/dns-cloudflare from 5.0.0 to 5.1.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 0.4.1
+  title: ""
+  date: 2025-10-07T18:01:09.129Z
+- commits:
     - subject: Generate JWKS file
       hash: eb9e37f1c26e10da9fef7ee42470ebeb19033b71
       body: ""
