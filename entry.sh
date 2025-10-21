@@ -614,6 +614,9 @@ function assemble_ca_bundle {
 function check_cert_expiry() {
 	[[ -s $1 ]] || return 1
 
+	cert_issuer="$(get_cert_issuer "$1" | awk -F'issuer=' '{print $2}')"
+	server_ca="$(get_cert_subject "${CERTS}/server-ca.pem" | awk -F'subject=' '{print $2}')"
+
 	expiry_check="$(openssl x509 -noout \
 		-checkend "${CERT_SECONDS_UNTIL_EXPIRY}" \
 		-in "$1")"
@@ -622,6 +625,10 @@ function check_cert_expiry() {
 	printf '\t%s\n\t%s\n' "$(get_cert_subject "$1")" "$(get_cert_issuer "$1")"
 
 	if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
+		if [[ -n "$cert_issuer" ]] && [[ -n "$server_ca" ]] && ! [[ "$cert_issuer" =~ $server_ca ]]; then
+			echo 'expiring custom SSL certificate, update manually'
+			return 0
+		fi
 		return 1
 	fi
 }
