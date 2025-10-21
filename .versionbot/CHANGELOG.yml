@@ -1,4 +1,14 @@
 - commits:
+    - subject: "patch: Correct custom SSL expiry handling"
+      hash: c98591c21b7ef35038861ac225bc0f99d9251f02
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.4.2
+  title: ""
+  date: 2025-10-21T15:28:12.031Z
+- commits:
     - subject: Update certbot/dns-cloudflare Docker tag to v5.1.0
       hash: a9faea3f89f44038f340bf3d377bd0b090c311b7
       body: |
