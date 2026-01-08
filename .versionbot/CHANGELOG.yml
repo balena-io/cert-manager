@@ -1,4 +1,18 @@
 - commits:
+    - subject: "fix: do not consider certificates by certbot as custom certificates."
+      hash: 979f03b473c910d59fe82bc96670744076431ffc
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Carlo Miguel F. Cruz <carloc@balena.io>
+        signed-off-by: Carlo Miguel F. Cruz <carloc@balena.io>
+      author: Carlo Miguel F. Cruz
+      nested: []
+  version: 0.4.5
+  title: ""
+  date: 2026-01-08T16:38:19.084Z
+- commits:
     - subject: Update certbot/dns-cloudflare Docker tag to v5.2.2
       hash: a53b6935c0827642555823676e5371ca8e54fa9b
       body: |
