@@ -625,7 +625,10 @@ function check_cert_expiry() {
 	printf '\t%s\n\t%s\n' "$(get_cert_subject "$1")" "$(get_cert_issuer "$1")"
 
 	if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
-		if [[ -n "$cert_issuer" ]] && [[ -n "$server_ca" ]] && ! [[ "$cert_issuer" =~ $server_ca ]]; then
+		if [[ ! -d live ]] &&
+			[[ -n "$cert_issuer" ]] && 
+			[[ -n "$server_ca" ]] &&
+			! [[ "$cert_issuer" =~ $server_ca ]]; then
 			echo 'expiring custom SSL certificate, update manually'
 			return 0
 		fi
