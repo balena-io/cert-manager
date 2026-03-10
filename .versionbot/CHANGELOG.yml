@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update certbot/dns-cloudflare Docker tag to v5.4.0
+      hash: b6b81b2b2b8b1ffee53a62fc3a0c81fe259bb29a
+      body: |
+        Update certbot/dns-cloudflare from 5.3.1 to 5.4.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 0.4.8
+  title: ""
+  date: 2026-03-10T19:28:51.179Z
+- commits:
     - subject: Update certbot/dns-cloudflare Docker tag to v5.3.1
       hash: fecfbd2b771034aa641355261cd1f13f17e0a601
       body: |
