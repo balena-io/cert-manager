@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update certbot/dns-cloudflare Docker tag to v5.5.0
+      hash: dde709c37f8ee3ebdd0b6b0ef66dc6c10ddbd00d
+      body: |
+        Update certbot/dns-cloudflare from 5.4.0 to 5.5.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 0.4.23
+  title: ""
+  date: 2026-04-07T19:23:30.626Z
+- commits:
     - subject: Revert flowzone pinning to master
       hash: 7b3d6113f97e7857d0c4b987217e2085c0e30d18
       body: ""
