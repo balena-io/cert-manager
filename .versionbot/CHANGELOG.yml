@@ -1,4 +1,17 @@
 - commits:
+    - subject: Pin certbot/dns-cloudflare Docker tag to 4231f04
+      hash: db3ae492efa435b1feb6f18c9282d8f1ce0e115d
+      body: |
+        Update certbot/dns-cloudflare
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 0.4.25
+  title: ""
+  date: 2026-05-12T17:54:22.535Z
+- commits:
     - subject: Update certbot/dns-cloudflare Docker tag to v5.6.0
       hash: c9610918403d2500a5b678fa19b5329a7bb95d04
       body: |
