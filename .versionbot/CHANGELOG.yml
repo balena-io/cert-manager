@@ -1,4 +1,16 @@
 - commits:
+    - subject: Drop DSA as modern ssh-keygen no longer supports it
+      hash: 11257aea7bce371b73e9ad2850f8c5e5d79baaed
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: joshbwlng
+      nested: []
+  version: 0.4.26
+  title: ""
+  date: 2026-05-13T08:23:24.961Z
+- commits:
     - subject: Pin certbot/dns-cloudflare Docker tag to 4231f04
       hash: db3ae492efa435b1feb6f18c9282d8f1ce0e115d
       body: |
