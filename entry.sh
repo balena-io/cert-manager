@@ -130,11 +130,11 @@ function generate_ssh_keys {
 	[[ -n "${tld}" ]] || return
 
 	if [[ -d "${CERTS}/private" ]]; then
-		# (DSA) https://security.stackexchange.com/a/112818/201462
-		for algo in rsa ecdsa dsa ed25519; do
+		rm -f "${CERTS}/private/"*.dsa.key*
+		for algo in rsa ecdsa ed25519; do
 			key="${CERTS}/private/${cn}.${tld}.${algo}.key"
 			if ! [[ -s "${key}" ]]; then
-				# cfssl doesn't handle dsa and ed25519 key formats
+				# cfssl doesn't handle ed25519 key format
 				ssh-keygen -f "${key}" -t "${algo}" -N "" -m PEM &&
 					chmod 0600 "${key}"
 			fi
