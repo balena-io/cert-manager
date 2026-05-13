@@ -20,8 +20,6 @@ signal that the volume contains complete set of PKI assets:
 	│   ├── api.{{tld}}.pem
 	│   ├── ca-bundle.{{tld}}.pem
 	│   ├── devices.{{tld}}.authorized_keys
-	│   ├── devices.{{tld}}.dsa.key
-	│   ├── devices.{{tld}}.dsa.key.pub
 	│   ├── devices.{{tld}}.ecdsa.key
 	│   ├── devices.{{tld}}.ecdsa.key.pub
 	│   ├── devices.{{tld}}.ed25519.key
@@ -30,8 +28,6 @@ signal that the volume contains complete set of PKI assets:
 	│   ├── devices.{{tld}}.rsa.key.pub
 	│   ├── dhparam.{{tld}}.pem
 	│   ├── git.{{tld}}.authorized_keys
-	│   ├── git.{{tld}}.dsa.key
-	│   ├── git.{{tld}}.dsa.key.pub
 	│   ├── git.{{tld}}.ecdsa.key
 	│   ├── git.{{tld}}.ecdsa.key.pub
 	│   ├── git.{{tld}}.ed25519.key
@@ -39,8 +35,6 @@ signal that the volume contains complete set of PKI assets:
 	│   ├── git.{{tld}}.rsa.key
 	│   ├── git.{{tld}}.rsa.key.pub
 	│   ├── proxy.{{tld}}.authorized_keys
-	│   ├── proxy.{{tld}}.dsa.key
-	│   ├── proxy.{{tld}}.dsa.key.pub
 	│   ├── proxy.{{tld}}.ecdsa.key
 	│   ├── proxy.{{tld}}.ecdsa.key.pub
 	│   ├── proxy.{{tld}}.ed25519.key
