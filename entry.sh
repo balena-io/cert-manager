@@ -25,7 +25,7 @@ ATTEMPTS=${ATTEMPTS:-3}
 TIMEOUT=${TIMEOUT:-60}
 CERT_SECONDS_UNTIL_EXPIRY=${CERT_SECONDS_UNTIL_EXPIRY:-604800} # 7 days
 
-# these must stay lowercase as they are substituted into config(s)
+# these must stay lowercase as they are substituted into config(s) (only used for CFSSL CA)
 country=${country:-US}
 state=${state:-Washington}
 locality_name=${locality_name:-Seattle}
@@ -383,10 +383,67 @@ function issue_private_certs {
 
 		if ! [[ -s "${CERTS}/private/${common_name}.pem" ]] || ! check_cert_expiry "${CERTS}/private/${common_name}.pem"; then
 			cat <"${tmprequest}" | jq -r
-			response="$(curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/newcert" --data @"${tmprequest}")"
-			echo "${response}" | jq -r '.result.certificate' >"${CERTS}/private/${common_name}.pem"
-			echo "${response}" | jq -r '.result.private_key' >"${CERTS}/private/${common_name}.key"
-			chmod 0600 "${CERTS}/private/${common_name}.key"
+
+			# first attempt to connect with AWS/PCA and get CA cert.
+			if check_pca; then
+				case "$key_algo" in
+				ecdsa)
+					# lazy switch for now, either it's a EC256 key (ignoring size completely)
+					openssl ecparam -name prime256v1 -genkey \
+						-out "${CERTS}/private/${common_name}.key"
+					;;
+				# TBC: post-quantum future:
+				# ML-DSA-44 (Security Category 2):
+				# openssl genpkey -algorithm ML-DSA-44 -out -
+				#
+				# ML-DSA-65 (Security Category 3):
+				# openssl genpkey -algorithm ML-DSA-65 -out -
+				#
+				# ML-DSA-87 (Security Category 5):
+				# openssl genpkey -algorithm ML-DSA-87 -out -
+				*)
+					# .. or fixed RSA width
+					openssl genrsa -out "${CERTS}/private/${common_name}.key" 2048
+					;;
+				esac
+				chmod 0600 "${CERTS}/private/${common_name}.key"
+
+				tmpcsr="$(mktemp)"
+				sans="$(_jq '.request.hosts' | jq -r 'map("DNS:" + .) | join(",")')"
+				openssl req -new -subj "/CN=${common_name}" \
+					-addext "subjectAltName=${sans}" \
+					-key "${CERTS}/private/${common_name}.key" \
+					-out "${tmpcsr}"
+
+				# verify
+				openssl req -in "${tmpcsr}" -noout -text
+
+				cert_arn="$(ATTEMPTS=2 with_backoff aws acm-pca issue-certificate \
+					--region "${AWS_REGION}" \
+					--certificate-authority-arn "${CERTIFICATE_AUTHORITY_ARN}" \
+					--signing-algorithm "${SIGNING_ALGO:-SHA256WITHECDSA}" \
+					--validity "Value=${VALIDITY:-395},Type=${VALIDITY_UNIT:-DAYS}" \
+					--template-arn "${CERT_TEMPLATE_ARN:-arn:aws:acm-pca:::template/EndEntityCertificate/V1}" \
+					--csr "$(cat <"${tmpcsr}" | openssl base64 -A)" | jq -re .CertificateArn)"
+
+				json="$(ATTEMPTS=2 with_backoff aws acm-pca get-certificate \
+					--region "${AWS_REGION}" \
+					--certificate-authority-arn "${CERTIFICATE_AUTHORITY_ARN}" \
+					--certificate-arn "${cert_arn}")"
+
+				certificate="$(echo "${json}" | jq -re .Certificate)"
+				certificate_chain="$(echo "${json}" | jq -re .CertificateChain)"
+				echo "${certificate}" >"${CERTS}/private/${common_name}.pem"
+				echo "${certificate_chain}" >>"${CERTS}/private/${common_name}.pem"
+			fi
+
+			# .. or fallback to CFSSL
+			if ! [[ -s "${CERTS}/private/${common_name}.pem" ]]; then
+				response="$(curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/newcert" --data @"${tmprequest}")"
+				echo "${response}" | jq -r '.result.certificate' >"${CERTS}/private/${common_name}.pem"
+				echo "${response}" | jq -r '.result.private_key' >"${CERTS}/private/${common_name}.key"
+				chmod 0600 "${CERTS}/private/${common_name}.key"
+			fi
 		fi
 		rm -f "${tmprequest}"
 	done
@@ -584,6 +641,16 @@ function get_server_ca {
 
 	# shellcheck disable=SC2153
 	if ! [[ -s "${CERTS}/private/server-ca.${tld}.pem" ]]; then
+		# first attempt to connect with AWS/PCA and get CA cert.
+		if check_pca; then
+			ATTEMPTS=2 json="$(with_backoff aws acm-pca get-certificate-authority-certificate \
+				--region "${AWS_REGION}" \
+				--certificate-authority-arn "${CERTIFICATE_AUTHORITY_ARN}")"
+			echo "${json}" | jq -re .Certificate >"${CERTS}/private/server-ca.${tld}.pem"
+			return
+		fi
+
+		# .. or fallback to CFSSL
 		curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/info" \
 			--data '{"label": "primary"}' |
 			jq -r '.result.certificate' >"${CERTS}/private/server-ca.${tld}.pem"
@@ -597,6 +664,16 @@ function get_root_ca {
 
 	# shellcheck disable=SC2153
 	if ! [[ -s "${CERTS}/private/root-ca.${tld}.pem" ]]; then
+		# first attempt to connect with AWS/PCA and get CA cert.
+		if check_pca; then
+			ATTEMPTS=2 json="$(with_backoff aws acm-pca get-certificate-authority-certificate \
+				--region "${AWS_REGION}" \
+				--certificate-authority-arn "${CERTIFICATE_AUTHORITY_ARN}")"
+			echo "${json}" | jq -re .CertificateChain >"${CERTS}/private/root-ca.${tld}.pem"
+			return
+		fi
+
+		# .. or fallback to CFSSL
 		curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/bundle" \
 			--data "{\"certificate\": \"$(cat <"${CERTS}/private/server-ca.${tld}.pem" | awk '{printf "%s\\n", $0}')\"}" |
 			jq -r '.result.root' >"${CERTS}/private/root-ca.${tld}.pem"
@@ -626,7 +703,7 @@ function check_cert_expiry() {
 
 	if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
 		if [[ ! -d live ]] &&
-			[[ -n "$cert_issuer" ]] && 
+			[[ -n "$cert_issuer" ]] &&
 			[[ -n "$server_ca" ]] &&
 			! [[ "$cert_issuer" =~ $server_ca ]]; then
 			echo 'expiring custom SSL certificate, update manually'
@@ -693,11 +770,32 @@ function remove_update_lock() {
 	rm -f /tmp/balena/updates.lock
 }
 
+function check_pca() {
+	ATTEMPTS=2 with_backoff aws sts get-caller-identity # whoami
+
+	ATTEMPTS=2 with_backoff aws acm-pca list-permissions \
+		--region "${AWS_REGION}" \
+		--certificate-authority-arn "${CERTIFICATE_AUTHORITY_ARN}" |
+		jq -re '.Permissions[].Actions | contains(["GetCertificate","IssueCertificate"])'
+}
+
+function check_cfssl() {
+	curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/health"
+}
+
+function wait_ca() {
+	# first attempt to connect with AWS/PCA and check permissions
+	check_pca && return
+
+	# .. or fallback to CFSSL
+	check_cfssl
+}
+
 rm -f "${CERTS}/.ready"
 
 mkdir -p "${CERTS}/public" "${CERTS}/private" "$(dirname "${EXPORT_CERT_CHAIN_PATH}")"
 
-while ! curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/health"; do sleep "$((RANDOM % 10 + 1))s"; done
+while ! wait_ca; do sleep "$((RANDOM % 10 + 1))s"; done
 
 get_server_ca "${TLD}"
 get_root_ca "${TLD}"
@@ -726,7 +824,7 @@ touch "${CERTS}/.ready"
 remove_update_lock
 
 while true; do
-	[[ -s "$EXPORT_CERT_CHAIN_PATH" ]] && check_cert_expiry "${EXPORT_CERT_CHAIN_PATH}"  # cert. chain may not exist (by design)
-	check_self_signed_certs_expiry  # .. but at least some self-signed certs. should
+	[[ -s "$EXPORT_CERT_CHAIN_PATH" ]] && check_cert_expiry "${EXPORT_CERT_CHAIN_PATH}" # cert. chain may not exist (by design)
+	check_self_signed_certs_expiry                                                      # .. but at least some self-signed certs. should
 	sleep 1d
 done
