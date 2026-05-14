@@ -378,18 +378,24 @@ function issue_private_certs {
 		_jq() {
 			echo "${request}" | base64 -d | jq -r "${1}"
 		}
-		tmprequest="$(mktemp)"
-		_jq '.' >"${tmprequest}"
 		common_name="$(_jq '.request.CN')"
 
-		if ! [[ -s "${CERTS}/private/${common_name}.pem" ]] || ! check_cert_expiry "${CERTS}/private/${common_name}.pem"; then
+		if ! [[ -s "${CERTS}/private/${common_name}.pem" ]] ||
+			! check_cert_expiry "${CERTS}/private/${common_name}.pem" ||
+			! check_cert_key_match "${CERTS}/private/${common_name}.pem" "${CERTS}/private/${common_name}.key"; then
+			tmprequest="$(mktemp)"
+			_jq '.' >"${tmprequest}"
 			cat <"${tmprequest}" | jq -r
 			response="$(curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/newcert" --data @"${tmprequest}")"
+			rm -f "${tmprequest}"
 			echo "${response}" | jq -r '.result.certificate' >"${CERTS}/private/${common_name}.pem"
 			echo "${response}" | jq -r '.result.private_key' >"${CERTS}/private/${common_name}.key"
 			chmod 0600 "${CERTS}/private/${common_name}.key"
+			if ! check_cert_key_match "${CERTS}/private/${common_name}.pem" "${CERTS}/private/${common_name}.key"; then
+				return 1
+			fi
 		fi
-		rm -f "${tmprequest}"
+
 	done
 }
 
@@ -637,6 +643,44 @@ function check_cert_expiry() {
 	fi
 }
 export -f check_cert_expiry
+
+function check_cert_key_match() {
+	[[ -s $1 ]] || return 1
+	[[ -s $2 ]] || return 1
+
+	local cert
+	cert=$1
+
+	local key
+	key=$2
+
+	local cert_pub
+	cert_pub="$(mktemp)"
+
+	local key_pub
+	key_pub="$(mktemp)"
+
+	local check_error
+	check_error=0
+
+	if ! openssl x509 -in "${cert}" -pubkey -noout >"${cert_pub}"; then
+		echo "unable to read public key from certificate ${cert}" 1>&2
+		check_error=1
+	fi
+
+	if ! openssl pkey -in "${key}" -pubout >"${key_pub}"; then
+		echo "unable to read public key from private key ${key}" 1>&2
+		check_error=1
+	fi
+
+	if ! cmp -s "${cert_pub}" "${key_pub}"; then
+		echo "private key ${key} does not match certificate ${cert}" 1>&2
+		check_error=1
+	fi
+
+	rm -f "${cert_pub}" "${key_pub}"
+	return "$check_error"
+}
 
 function get_cert_issuer() {
 	[[ -s $1 ]] || return 1
