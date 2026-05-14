@@ -6,28 +6,12 @@
 
 set -eo pipefail
 
-ENTRY_SH="${ENTRY_SH:-/usr/local/bin/entry.sh}"
-
-if [[ ! -s "${ENTRY_SH}" ]]; then
-	echo "FAIL: ${ENTRY_SH} not found in image" >&2
-	exit 1
-fi
-
-# Extract the algorithm list from entry.sh's `for algo in <...>; do` loop so
-# this test stays in sync with production without duplicating the list.
-algos=$(sed -n 's/.*for algo in \(.*\); do.*/\1/p' "${ENTRY_SH}")
-
-if [[ -z "${algos}" ]]; then
-	echo "FAIL: could not extract algorithm list from ${ENTRY_SH}" >&2
-	exit 1
-fi
-
-echo "Testing ssh-keygen for algorithms: ${algos}"
+echo "Testing ssh-keygen for algorithms: ${SSH_KEY_ALGOS}"
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "${workdir}"' EXIT
 
-for algo in ${algos}; do
+for algo in ${SSH_KEY_ALGOS}; do
 	key="${workdir}/test.${algo}.key"
 
 	if ! ssh-keygen -f "${key}" -t "${algo}" -N "" -m PEM >/dev/null; then
