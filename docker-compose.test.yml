@@ -1,0 +1,14 @@
+services:
+  sut:
+    image: sut
+    volumes:
+      - ./tests:/tests:ro
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        for t in /tests/*.sh; do
+          echo "== $${t} =="
+          bash "$${t}"
+        done
+    environment:
+      SSH_KEY_ALGOS: "rsa ecdsa ed25519"

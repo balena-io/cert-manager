@@ -24,6 +24,7 @@ DNS_CLOUDFLARE_PROPAGATION_SECONDS=${DNS_CLOUDFLARE_PROPAGATION_SECONDS:-60}
 ATTEMPTS=${ATTEMPTS:-3}
 TIMEOUT=${TIMEOUT:-60}
 CERT_SECONDS_UNTIL_EXPIRY=${CERT_SECONDS_UNTIL_EXPIRY:-604800} # 7 days
+SSH_KEY_ALGOS="${SSH_KEY_ALGOS:-rsa ecdsa ed25519}"  # ensure compose tests match
 
 # these must stay lowercase as they are substituted into config(s)
 country=${country:-US}
@@ -131,7 +132,7 @@ function generate_ssh_keys {
 
 	if [[ -d "${CERTS}/private" ]]; then
 		rm -f "${CERTS}/private/"*.dsa.key*
-		for algo in rsa ecdsa ed25519; do
+		for algo in ${SSH_KEY_ALGOS}; do
 			key="${CERTS}/private/${cn}.${tld}.${algo}.key"
 			if ! [[ -s "${key}" ]]; then
 				# cfssl doesn't handle ed25519 key format
@@ -626,7 +627,7 @@ function check_cert_expiry() {
 
 	if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
 		if [[ ! -d live ]] &&
-			[[ -n "$cert_issuer" ]] && 
+			[[ -n "$cert_issuer" ]] &&
 			[[ -n "$server_ca" ]] &&
 			! [[ "$cert_issuer" =~ $server_ca ]]; then
 			echo 'expiring custom SSL certificate, update manually'
