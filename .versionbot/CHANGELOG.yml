@@ -1,4 +1,16 @@
 - commits:
+    - subject: Add ssh-keygen algorithm test
+      hash: ad28c37917009850f3d1fad843b2c44f2ebf0a77
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: joshbwlng
+      nested: []
+  version: 0.4.27
+  title: ""
+  date: 2026-05-15T00:10:29.102Z
+- commits:
     - subject: Drop DSA as modern ssh-keygen no longer supports it
       hash: 11257aea7bce371b73e9ad2850f8c5e5d79baaed
       body: ""
