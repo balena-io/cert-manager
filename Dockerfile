@@ -1,4 +1,4 @@
-FROM certbot/dns-cloudflare:v5.7.0@sha256:2d4509d3643716775242d77acf61082c384f9b74aa9696146e2a35a39ffa2e02
+FROM certbot/dns-cloudflare:v5.7.0@sha256:3bd60102cdef55294a44ffbff10bb54dd086803aa57d3f854933b756d305fbb8
 
 # hadolint ignore=DL3018
 RUN apk add --no-cache \
