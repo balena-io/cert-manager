@@ -748,7 +748,7 @@ get_server_ca "${TLD}"
 get_root_ca "${TLD}"
 
 hosts="$(resolve_hosts "${DNS_TLD}" "${TLD}" "${SUBJECT_ALTERNATE_NAMES}")"
-hosts="$(jq -c -n --arg hosts "${hosts::-1}" '$hosts | split(",")')"
+hosts="$(jq -c -n --arg hosts "${hosts%?}" '$hosts | split(",")' | jq -c 'unique')"
 sans="$(resolve_sans "${DNS_TLD}" "${TLD}" "${SUBJECT_ALTERNATE_NAMES}")"
 
 # enter critical section
