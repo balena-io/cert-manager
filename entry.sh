@@ -559,8 +559,8 @@ function resolve_sans {
 	arr=("${subject_alternate_names//,/ }")
 	local sans
 	# shellcheck disable=SC2048
-	sans="$(for san in ${arr[*]}; do echo "-d ${san}.${tld} -d ${san}.${dns_tld}"; done)"
-	echo "${sans}"
+	sans="$(for _tld in "${tld}" "${dns_tld}"; do for san in ${arr[*]}; do echo "${san}.${_tld}"; done; done)"
+	for san in $(echo "${sans}" | sort -u); do echo "-d ${san}"; done
 	set +f
 }
 
