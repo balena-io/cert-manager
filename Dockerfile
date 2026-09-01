@@ -2,6 +2,7 @@ FROM certbot/dns-cloudflare:v5.8.0@sha256:c45edb002b883da1a1235abb205dff474a7a1a
 
 # hadolint ignore=DL3018
 RUN apk add --no-cache \
+	aws-cli \
 	bash \
 	curl \
 	gettext \
