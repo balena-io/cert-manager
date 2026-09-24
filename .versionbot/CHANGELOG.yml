@@ -1,4 +1,14 @@
 - commits:
+    - subject: "minor: Support AWS/PCA with fallback to CFSSL (ca-private)"
+      hash: c5bc9868677d87a636c73091d7cc691beb179cd6
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.5.0
+  title: ""
+  date: 2026-09-24T15:40:20.647Z
+- commits:
     - subject: Update certbot/dns-cloudflare Docker tag to v5.8.0
       hash: d2fec4e9de2a32bc9cd8b77c7c81f528af4c4283
       body: |
