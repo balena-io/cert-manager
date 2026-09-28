@@ -672,7 +672,7 @@ function get_root_ca {
 	if ! [[ -s "${CERTS}/private/root-ca.${tld}.pem" ]]; then
 		# first attempt to connect with AWS/PCA and get CA cert.
 		if check_pca; then
-			ATTEMPTS=2 TIMEOUT=5 json="$(with_backoff aws acm-pca get-certificate-authority-certificate \
+			json="$(ATTEMPTS=2 TIMEOUT=5 with_backoff aws acm-pca get-certificate-authority-certificate \
 				--region "${AWS_REGION}" \
 				--certificate-authority-arn "${CERTIFICATE_AUTHORITY_ARN}")"
 			echo "${json}" | jq -re .CertificateChain >"${CERTS}/private/root-ca.${tld}.pem"
