@@ -834,11 +834,9 @@ function check_cfssl() {
 
 function wait_ca() {
 	# first attempt to connect with AWS/PCA and check permissions
-	if ! check_pca; then
-		# .. or fallback to CFSSL
-		check_cfssl && return
-	fi
-	return 1
+      check_pca && return 0
+      check_cfssl && return 0
+      return 1
 }
 
 rm -f "${CERTS}/.ready"
