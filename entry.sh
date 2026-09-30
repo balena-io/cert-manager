@@ -2,7 +2,7 @@
 
 set -ea
 
-[[ "${VERBOSE}" =~ on|On|Yes|yes|true|True ]] && set -x
+[[ ${VERBOSE} =~ on|On|Yes|yes|true|True ]] && set -x
 
 if [[ -n $BALENA_DEVICE_UUID ]]; then
 	# prepend the device UUID if running on balenaOS
@@ -24,7 +24,7 @@ DNS_CLOUDFLARE_PROPAGATION_SECONDS=${DNS_CLOUDFLARE_PROPAGATION_SECONDS:-60}
 ATTEMPTS=${ATTEMPTS:-3}
 TIMEOUT=${TIMEOUT:-60}
 CERT_SECONDS_UNTIL_EXPIRY=${CERT_SECONDS_UNTIL_EXPIRY:-604800} # 7 days
-SSH_KEY_ALGOS="${SSH_KEY_ALGOS:-rsa ecdsa ed25519}"  # ensure compose tests match
+SSH_KEY_ALGOS="${SSH_KEY_ALGOS:-rsa ecdsa ed25519}"            # ensure compose tests match
 
 # these must stay lowercase as they are substituted into config(s) (only used for CFSSL CA)
 country=${country:-US}
@@ -46,7 +46,7 @@ curl_with_opts() {
 }
 
 curl_with_auth_opts() {
-	if [[ -n "${AUTH_TOKEN:-}" ]]; then
+	if [[ -n ${AUTH_TOKEN:-} ]]; then
 		curl_with_opts -H "Authorization: Bearer ${AUTH_TOKEN}" "$@"
 	else
 		curl_with_opts "$@"
@@ -87,7 +87,7 @@ function with_backoff() {
 function compute_api_kid {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	if [[ -s "${CERTS}/private/api.${tld}.key" ]]; then
 		openssl ec \
@@ -114,7 +114,7 @@ function compute_api_kid {
 function generate_vpn_dhparams {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	if ! [[ -s "${CERTS}/private/dhparam.${tld}.pem" ]]; then
 		openssl dhparam -out "${CERTS}/private/dhparam.${tld}.pem" 2048
@@ -124,17 +124,17 @@ function generate_vpn_dhparams {
 function generate_ssh_keys {
 	local cn
 	cn="${1}"
-	[[ -n "${cn}" ]] || return
+	[[ -n ${cn} ]] || return
 
 	local tld
 	tld="${2}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	if [[ -d "${CERTS}/private" ]]; then
 		rm -f "${CERTS}/private/"*.dsa.key*
 		for algo in ${SSH_KEY_ALGOS}; do
 			key="${CERTS}/private/${cn}.${tld}.${algo}.key"
-			if ! [[ -s "${key}" ]]; then
+			if ! [[ -s ${key} ]]; then
 				# cfssl doesn't handle ed25519 key format
 				ssh-keygen -f "${key}" -t "${algo}" -N "" -m PEM &&
 					chmod 0600 "${key}"
@@ -155,7 +155,7 @@ function get_acme_email {
 		if [[ -n $BALENA_API_URL ]]; then
 			local balena_device_uuid
 			balena_device_uuid="${1}"
-			[[ -n "${balena_device_uuid}" ]] || return
+			[[ -n ${balena_device_uuid} ]] || return
 
 			# shellcheck disable=SC2153
 			acme_email="$(curl_with_opts "${BALENA_API_URL}/user/v1/whoami" \
@@ -170,16 +170,16 @@ function get_acme_email {
 function get_env_var_value {
 	local varname
 	varname="${2}"
-	[[ -n "${varname}" ]] || return
+	[[ -n ${varname} ]] || return
 
 	local varval
 	varval=${!varname}
 
-	if [[ -z "$varval" ]]; then
+	if [[ -z $varval ]]; then
 		if [[ -n $BALENA_API_URL ]] && [[ -n $BALENA_API_KEY ]]; then
 			local balena_device_uuid
 			balena_device_uuid="${1}"
-			[[ -n "${balena_device_uuid}" ]] || return
+			[[ -n ${balena_device_uuid} ]] || return
 
 			balena_device_id="$(curl_with_opts \
 				"${BALENA_API_URL}/v6/device?\$filter=uuid%20eq%20'${balena_device_uuid}'" \
@@ -204,10 +204,10 @@ function cloudflare_issue_public_cert {
 
 	local dns_tld
 	dns_tld="${2}"
-	[[ -n "${dns_tld}" ]] || return
+	[[ -n ${dns_tld} ]] || return
 
 	cloudflare_api_token="$(get_env_var_value "${balena_device_uuid}" CLOUDFLARE_API_TOKEN)"
-	[[ -n "${cloudflare_api_token}" ]] || return
+	[[ -n ${cloudflare_api_token} ]] || return
 
 	mkdir -p ~/.secrets/certbot
 
@@ -232,10 +232,10 @@ function gandi_issue_public_cert {
 
 	local dns_tld
 	dns_tld="${2}"
-	[[ -n "${dns_tld}" ]] || return
+	[[ -n ${dns_tld} ]] || return
 
 	gandi_api_token="$(get_env_var_value "${balena_device_uuid}" GANDI_API_TOKEN)"
-	[[ -n "${gandi_api_token}" ]] || return
+	[[ -n ${gandi_api_token} ]] || return
 
 	mkdir -p ~/.secrets/certbot
 
@@ -303,11 +303,11 @@ function issue_public_certs {
 
 	local dns_tld
 	dns_tld="${2}"
-	[[ -n "${dns_tld}" ]] || return
+	[[ -n ${dns_tld} ]] || return
 
 	local tld
 	tld="${3}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	if ! [[ $dns_tld =~ ^.*\.local\.? ]]; then
 		restore_certs_from_s3 "${dns_tld}"
@@ -371,7 +371,7 @@ function issue_public_certs {
 function issue_private_certs {
 	local requests_certs
 	requests_certs="${1}"
-	[[ -s "${requests_certs}" ]] || return
+	[[ -s ${requests_certs} ]] || return
 
 	# https://www.starkandwayne.com/blog/bash-for-loop-over-json-array-using-jq/
 	for request in $(cat <"${requests_certs}" | jq -r '.[] | @base64'); do
@@ -458,7 +458,7 @@ function issue_private_certs {
 function issue_private_keys {
 	local requests_keys
 	requests_keys="${1}"
-	[[ -s "${requests_keys}" ]] || return
+	[[ -s ${requests_keys} ]] || return
 
 	for request in $(cat <"${requests_keys}" | jq -r '.[] | @base64'); do
 		_jq() {
@@ -481,7 +481,7 @@ function issue_private_keys {
 function generate_compute_all {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	compute_api_kid "${tld}"
 	generate_vpn_dhparams "${tld}"
@@ -497,7 +497,7 @@ function generate_compute_all {
 function resolve_cert_target {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	local target
 	target=private
@@ -516,7 +516,7 @@ function resolve_cert_target {
 function surface_resolved_cert_chain {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	target="$(resolve_cert_target "${tld}")"
 	for cert in "${tld}.pem" \
@@ -532,17 +532,17 @@ function surface_resolved_cert_chain {
 	done
 
 	# shellcheck disable=SC2235
-	if [[ -s "$EXPORT_CERT_CHAIN_PATH" ]] && [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
+	if [[ -s $EXPORT_CERT_CHAIN_PATH ]] && [[ -s "${CERTS}/${target}/${tld}-chain.pem" ]]; then
 		cert_issuer="$(get_cert_issuer "${EXPORT_CERT_CHAIN_PATH}" | awk -F'issuer=' '{print $2}')"
 		server_ca="$(get_cert_subject "${CERTS}/server-ca.pem" | awk -F'subject=' '{print $2}')"
 
 		custom_cert=1
-		if [[ "$cert_issuer" =~ $server_ca ]]; then
+		if [[ $cert_issuer =~ $server_ca ]]; then
 			custom_cert=0
 		fi
 
 		update_link=0
-		if [[ ! -L "${EXPORT_CERT_CHAIN_PATH}" ||
+		if [[ ! -L ${EXPORT_CERT_CHAIN_PATH} ||
 			$(readlink "${EXPORT_CERT_CHAIN_PATH}") != "${CERTS}/${target}/${tld}-chain.pem" ]]; then
 			update_link=1
 		fi
@@ -566,7 +566,7 @@ function surface_resolved_cert_chain {
 function assemble_private_cert_chain {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	# file doesn't exist or empty, or expiring soon
 	if ! [[ -s "${CERTS}/private/${tld}-chain.pem" ]] ||
@@ -587,7 +587,7 @@ function assemble_private_cert_chain {
 function surface_root_certs {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	for cert in ca-bundle server-ca root-ca; do
 		if [[ ! -L "${CERTS}/${cert}.pem" ||
@@ -604,13 +604,13 @@ function resolve_sans {
 	set -f
 	local dns_tld
 	dns_tld="${1}"
-	[[ -n "${dns_tld}" ]] || return
+	[[ -n ${dns_tld} ]] || return
 	local tld
 	tld="${2}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 	local subject_alternate_names
 	subject_alternate_names="${3}"
-	[[ -n "${subject_alternate_names}" ]] || return
+	[[ -n ${subject_alternate_names} ]] || return
 	local arr
 	arr=("${subject_alternate_names//,/ }")
 	local sans
@@ -624,13 +624,13 @@ function resolve_hosts {
 	set -f
 	local dns_tld
 	dns_tld="${1}"
-	[[ -n "${dns_tld}" ]] || return
+	[[ -n ${dns_tld} ]] || return
 	local tld
 	tld="${2}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 	local subject_alternate_names
 	subject_alternate_names="${3}"
-	[[ -n "${subject_alternate_names}" ]] || return
+	[[ -n ${subject_alternate_names} ]] || return
 	local arr
 	arr=("${subject_alternate_names//,/ }")
 	local hosts
@@ -643,7 +643,7 @@ function resolve_hosts {
 function get_server_ca {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	# shellcheck disable=SC2153
 	if ! [[ -s "${CERTS}/private/server-ca.${tld}.pem" ]]; then
@@ -666,13 +666,13 @@ function get_server_ca {
 function get_root_ca {
 	local tld
 	tld="${1}"
-	[[ -n "${tld}" ]] || return
+	[[ -n ${tld} ]] || return
 
 	# shellcheck disable=SC2153
 	if ! [[ -s "${CERTS}/private/root-ca.${tld}.pem" ]]; then
 		# first attempt to connect with AWS/PCA and get CA cert.
 		if check_pca; then
-			ATTEMPTS=2 json="$(with_backoff aws acm-pca get-certificate-authority-certificate \
+			json="$(ATTEMPTS=2 TIMEOUT=5 with_backoff aws acm-pca get-certificate-authority-certificate \
 				--region "${AWS_REGION}" \
 				--certificate-authority-arn "${CERTIFICATE_AUTHORITY_ARN}")"
 			echo "${json}" | jq -re .CertificateChain >"${CERTS}/private/root-ca.${tld}.pem"
@@ -707,11 +707,11 @@ function check_cert_expiry() {
 	echo "$1 ${expiry_check} in $((CERT_SECONDS_UNTIL_EXPIRY / 60 / 60 / 24)) days"
 	printf '\t%s\n\t%s\n' "$(get_cert_subject "$1")" "$(get_cert_issuer "$1")"
 
-	if ! [[ "${expiry_check}" =~ 'will not expire' ]]; then
+	if ! [[ ${expiry_check} =~ 'will not expire' ]]; then
 		if [[ ! -d live ]] &&
-			[[ -n "$cert_issuer" ]] &&
-			[[ -n "$server_ca" ]] &&
-			! [[ "$cert_issuer" =~ $server_ca ]]; then
+			[[ -n $cert_issuer ]] &&
+			[[ -n $server_ca ]] &&
+			! [[ $cert_issuer =~ $server_ca ]]; then
 			echo 'expiring custom SSL certificate, update manually'
 			return 0
 		fi
@@ -815,24 +815,28 @@ function remove_update_lock() {
 }
 
 function check_pca() {
-	ATTEMPTS=2 with_backoff aws sts get-caller-identity # whoami
+	# whoami check first to see if we even have AWS creds.
+	ATTEMPTS=2 TIMEOUT=5 with_backoff aws sts get-caller-identity || return 1
 
-	ATTEMPTS=2 with_backoff aws acm-pca list-permissions \
+	ATTEMPTS=2 TIMEOUT=5 with_backoff aws acm-pca list-permissions \
 		--region "${AWS_REGION}" \
 		--certificate-authority-arn "${CERTIFICATE_AUTHORITY_ARN}" |
-		jq -re '.Permissions[].Actions | contains(["GetCertificate","IssueCertificate"])'
+		jq -re '.Permissions[].Actions
+		| contains(["GetCertificate","IssueCertificate"])' && return 0
+
+	return 1
 }
 
 function check_cfssl() {
-	curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/health"
+	curl_with_auth_opts "${CA_HTTP_URL}/api/v1/cfssl/health" && return 0
+	return 1
 }
 
 function wait_ca() {
 	# first attempt to connect with AWS/PCA and check permissions
-	check_pca && return
-
-	# .. or fallback to CFSSL
-	check_cfssl
+	check_pca && return 0
+	check_cfssl && return 0
+	return 1
 }
 
 rm -f "${CERTS}/.ready"
@@ -868,7 +872,7 @@ touch "${CERTS}/.ready"
 remove_update_lock
 
 while true; do
-	[[ -s "$EXPORT_CERT_CHAIN_PATH" ]] && check_cert_expiry "${EXPORT_CERT_CHAIN_PATH}" # cert. chain may not exist (by design)
-	check_self_signed_certs_expiry                                                      # .. but at least some self-signed certs. should
+	[[ -s $EXPORT_CERT_CHAIN_PATH ]] && check_cert_expiry "${EXPORT_CERT_CHAIN_PATH}" # cert. chain may not exist (by design)
+	check_self_signed_certs_expiry                                                    # .. but at least some self-signed certs. should
 	sleep 1d
 done
