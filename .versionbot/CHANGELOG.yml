@@ -1,4 +1,14 @@
 - commits:
+    - subject: "patch: Filter duplicate hosts"
+      hash: 7e6e1869a2a4e5ea8b82d2c41f5c996646fa9c82
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.5.1
+  title: ""
+  date: 2026-09-30T03:33:42.149Z
+- commits:
     - subject: "minor: Support AWS/PCA with fallback to CFSSL (ca-private)"
       hash: c5bc9868677d87a636c73091d7cc691beb179cd6
       body: ""
