@@ -1,4 +1,14 @@
 - commits:
+    - subject: "patch: Correct PCA check"
+      hash: 8d642ab72c9a968dbcd3e0c4d31e3703c7199533
+      body: ""
+      footer: {}
+      author: Anton Belodedenko
+      nested: []
+  version: 0.5.2
+  title: ""
+  date: 2026-10-06T01:29:26.937Z
+- commits:
     - subject: "patch: Filter duplicate hosts"
       hash: 7e6e1869a2a4e5ea8b82d2c41f5c996646fa9c82
       body: ""
