@@ -19,7 +19,7 @@ for algo in ${SSH_KEY_ALGOS}; do
 		exit 1
 	fi
 
-	if [[ ! -s "${key}" ]]; then
+	if [[ ! -s ${key} ]]; then
 		echo "FAIL: private key not produced for ${algo}" >&2
 		exit 1
 	fi
