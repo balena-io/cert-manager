@@ -1,4 +1,24 @@
 - commits:
+    - subject: Upgrade ca-certificates to the latest Alpine release
+      hash: 1046d216f1de82c05641a2fe0fa2d28757fbb082
+      body: |
+        The base image ships ca-certificates 20260611-r0, which predates the NSS
+        release that drops the compromised eMudhra roots. Upgrade both packages
+        on top of it: the roots live in the ca-certificates-bundle subpackage,
+        and neither package depends on the other.
+
+        No version is pinned. An exact pin stops resolving once Alpine publishes
+        a newer build and would break the image, and --upgrade already takes the
+        newest version in the index.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: joshbwlng
+      nested: []
+  version: 0.5.3
+  title: ""
+  date: 2026-10-23T12:37:54.616Z
+- commits:
     - subject: "patch: Correct PCA check"
       hash: 8d642ab72c9a968dbcd3e0c4d31e3703c7199533
       body: ""
