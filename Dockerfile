@@ -10,7 +10,10 @@ RUN apk add --no-cache \
 	nodejs \
 	openssh \
 	lockfile-progs \
-	minio-client
+	minio-client \
+	&& apk add --no-cache --upgrade \
+		ca-certificates \
+		ca-certificates-bundle
 
 WORKDIR /etc/letsencrypt
 
