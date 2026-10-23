@@ -24,19 +24,26 @@ function check {
 }
 
 function check_fails {
-	local name status
+	local name status output
 	name="${1}"
 	shift
 
+	# The caller redirects stdout straight into the target file, so a failing
+	# script must exit non-zero and write nothing.
 	status=0
-	"${@}" >/dev/null 2>&1 || status="${?}"
+	output="$("${@}" 2>/dev/null)" || status="${?}"
 
 	if [[ ${status} -eq 0 ]]; then
 		echo "FAIL: ${name}: expected a non-zero exit status" >&2
 		exit 1
 	fi
 
-	echo "ok: ${name} (exit ${status})"
+	if [[ -n ${output} ]]; then
+		echo "FAIL: ${name}: wrote to stdout before failing" >&2
+		exit 1
+	fi
+
+	echo "ok: ${name} (exit ${status}, no output)"
 }
 
 # The script hashes raw bytes, so these need not be real DER files.
