@@ -84,6 +84,30 @@ function with_backoff() {
 	return $exitCode
 }
 
+# Run a command and put its stdout in ${1}, but only if it succeeds. A plain
+# redirection truncates the target before the command runs, so a failure would
+# leave a zero-byte file on the persistent volume and destroy the last known
+# good copy.
+function replace_on_success {
+	local target tmp
+	target="${1}"
+	shift
+
+	tmp="$(mktemp "${target}.XXXXXX")"
+
+	# mktemp creates the file 0600, but a plain redirection would have applied
+	# the umask. Keep the permissions other containers sharing ${CERTS} expect.
+	chmod "$(printf '%o' $((0666 & ~0$(umask))))" "${tmp}"
+
+	if "${@}" >"${tmp}"; then
+		mv "${tmp}" "${target}"
+	else
+		rm -f "${tmp}"
+		echo "WARNING: ${1} failed; keeping the existing ${target}" >&2
+		return 1
+	fi
+}
+
 function compute_api_kid {
 	local tld
 	tld="${1}"
@@ -99,15 +123,13 @@ function compute_api_kid {
 
 	if [[ -s "${CERTS}/private/api.${tld}.der" ]]; then
 		# https://github.com/balena-io/open-balena/blob/master/scripts/gen-token-auth-cert
-		node --no-deprecation /opt/_keyid.js \
-			"${CERTS}/private/api.${tld}.der" \
-			>"${CERTS}/private/api.${tld}.kid"
+		replace_on_success "${CERTS}/private/api.${tld}.kid" \
+			/opt/_keyid.sh "${CERTS}/private/api.${tld}.der"
 	fi
 
 	if [[ -s "${CERTS}/private/api.${tld}.pem" && -s "${CERTS}/private/api.${tld}.key" && -s "${CERTS}/private/api.${tld}.kid" ]]; then
-		node --no-deprecation /opt/_jwks.js \
-			"${CERTS}/private/api.${tld}" \
-			>"${CERTS}/private/api.${tld}.jwks.json"
+		replace_on_success "${CERTS}/private/api.${tld}.jwks.json" \
+			/opt/_jwks.sh "${CERTS}/private/api.${tld}"
 	fi
 }
 
