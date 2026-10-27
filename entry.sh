@@ -99,13 +99,13 @@ function compute_api_kid {
 
 	if [[ -s "${CERTS}/private/api.${tld}.der" ]]; then
 		# https://github.com/balena-io/open-balena/blob/master/scripts/gen-token-auth-cert
-		node --no-deprecation /opt/_keyid.js \
+		/opt/_keyid.sh \
 			"${CERTS}/private/api.${tld}.der" \
 			>"${CERTS}/private/api.${tld}.kid"
 	fi
 
 	if [[ -s "${CERTS}/private/api.${tld}.pem" && -s "${CERTS}/private/api.${tld}.key" && -s "${CERTS}/private/api.${tld}.kid" ]]; then
-		node --no-deprecation /opt/_jwks.js \
+		/opt/_jwks.sh \
 			"${CERTS}/private/api.${tld}" \
 			>"${CERTS}/private/api.${tld}.jwks.json"
 	fi

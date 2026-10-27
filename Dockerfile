@@ -7,7 +7,6 @@ RUN apk add --no-cache \
 	curl \
 	gettext \
 	jq \
-	nodejs \
 	openssh \
 	lockfile-progs \
 	minio-client \
@@ -19,7 +18,7 @@ WORKDIR /etc/letsencrypt
 
 COPY entry.sh /usr/local/bin/
 
-COPY _jwks.js _keyid.js *.json /opt/
+COPY _jwks.sh _keyid.sh *.json /opt/
 
 ENTRYPOINT ["/bin/bash"]
 
