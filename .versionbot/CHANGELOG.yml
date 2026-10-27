@@ -1,4 +1,19 @@
 - commits:
+    - subject: Replace the Node JWKS and key ID scripts with bash
+      hash: f246f37e7efd353905904403ded04745de24e6db
+      body: |
+        Rewrite jwks and keyid scripts in bash so we can
+        drop the node dependency. Add tests for these new
+        scripts.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: joshbwlng
+      nested: []
+  version: 0.5.4
+  title: ""
+  date: 2026-10-27T07:08:57.833Z
+- commits:
     - subject: Upgrade ca-certificates to the latest Alpine release
       hash: 1046d216f1de82c05641a2fe0fa2d28757fbb082
       body: |
