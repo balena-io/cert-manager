@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update certbot/dns-cloudflare Docker tag to v5.9.0
+      hash: 88d600f13e06323285804257ddc0a7048209e4da
+      body: |
+        Update certbot/dns-cloudflare from 5.8.0 to 5.9.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 0.5.5
+  title: ""
+  date: 2026-10-29T01:20:22.121Z
+- commits:
     - subject: Replace the Node JWKS and key ID scripts with bash
       hash: f246f37e7efd353905904403ded04745de24e6db
       body: |
